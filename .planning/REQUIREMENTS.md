@@ -9,23 +9,23 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### MCP Protocol
 
-- [ ] **MCP-01**: Server implements JSON-RPC 2.0 via official `@modelcontextprotocol/sdk`
-- [ ] **MCP-02**: Server uses stdio transport (stdin/stdout)
-- [ ] **MCP-03**: Server responds to `tools/list` with AskUserQuestion tool
-- [ ] **MCP-04**: Server responds to `tools/call` for AskUserQuestion
-- [ ] **MCP-05**: Tool input validated with Zod schemas
+- [x] **MCP-01**: Server implements JSON-RPC 2.0 via official `@modelcontextprotocol/sdk`
+- [x] **MCP-02**: Server uses stdio transport (stdin/stdout)
+- [x] **MCP-03**: Server responds to `tools/list` with AskUserQuestion tool
+- [x] **MCP-04**: Server responds to `tools/call` for AskUserQuestion
+- [x] **MCP-05**: Tool input validated with Zod schemas
 
 ### AskUserQuestion Tool
 
-- [ ] **TOOL-01**: Tool accepts `question` string parameter
-- [ ] **TOOL-02**: Tool returns user's text response
-- [ ] **TOOL-03**: Tool times out after 5 minutes with graceful error message
+- [x] **TOOL-01**: Tool accepts `question` string parameter
+- [x] **TOOL-02**: Tool returns user's text response
+- [x] **TOOL-03**: Tool times out after 5 minutes with graceful error message
 - [ ] **TOOL-04**: Tool accepts optional `timeout` parameter (configurable per request)
 - [ ] **TOOL-05**: Tool logs Q&A to response history/audit trail
 
 ### Emacsclient Integration
 
-- [ ] **EMACS-01**: Server spawns emacsclient using `spawn()` with argument arrays (secure)
+- [x] **EMACS-01**: Server spawns emacsclient using `spawn()` with argument arrays (secure)
 - [ ] **EMACS-02**: Server handles "Emacs server not running" with clear error message
 - [ ] **EMACS-03**: Server cleans up child processes on exit (signal handlers)
 - [ ] **EMACS-04**: Custom `mr-x/ask-user-question` elisp function with styled prompts
@@ -83,17 +83,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MCP-01 | Phase 1 | Pending |
-| MCP-02 | Phase 1 | Pending |
-| MCP-03 | Phase 1 | Pending |
-| MCP-04 | Phase 1 | Pending |
-| MCP-05 | Phase 1 | Pending |
-| TOOL-01 | Phase 1 | Pending |
-| TOOL-02 | Phase 1 | Pending |
-| TOOL-03 | Phase 1 | Pending |
+| MCP-01 | Phase 1 | Complete |
+| MCP-02 | Phase 1 | Complete |
+| MCP-03 | Phase 1 | Complete |
+| MCP-04 | Phase 1 | Complete |
+| MCP-05 | Phase 1 | Complete |
+| TOOL-01 | Phase 1 | Complete |
+| TOOL-02 | Phase 1 | Complete |
+| TOOL-03 | Phase 1 | Complete |
 | TOOL-04 | Phase 2 | Pending |
 | TOOL-05 | Phase 3 | Pending |
-| EMACS-01 | Phase 1 | Pending |
+| EMACS-01 | Phase 1 | Complete |
 | EMACS-02 | Phase 2 | Pending |
 | EMACS-03 | Phase 2 | Pending |
 | EMACS-04 | Phase 3 | Pending |

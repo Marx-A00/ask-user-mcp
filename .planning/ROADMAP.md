@@ -12,7 +12,7 @@ Build an MCP server that bridges Claude's AskUserQuestion tool calls to Emacs mi
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Core MCP Server** - Protocol-compliant foundation with secure emacsclient integration
+- [x] **Phase 1: Core MCP Server** - Protocol-compliant foundation with secure emacsclient integration
 - [ ] **Phase 2: Error Handling & Reliability** - Graceful degradation and production-ready resilience
 - [ ] **Phase 3: Emacs UX & Production Hardening** - Styled prompts, observability, and documentation
 
@@ -32,8 +32,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Initialize TypeScript project with MCP SDK and stdio transport
-- [ ] 01-02-PLAN.md — Implement AskUserQuestion tool with emacsclient integration
+- [x] 01-01-PLAN.md — Initialize TypeScript project with MCP SDK and stdio transport
+- [x] 01-02-PLAN.md — Implement AskUserQuestion tool with emacsclient integration
 
 ### Phase 2: Error Handling & Reliability
 **Goal**: Server handles real-world failure modes gracefully without crashes or zombie processes
@@ -76,6 +76,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core MCP Server | 0/2 | Not started | - |
+| 1. Core MCP Server | 2/2 | Complete | 2026-01-26 |
 | 2. Error Handling & Reliability | 0/TBD | Not started | - |
 | 3. Emacs UX & Production Hardening | 0/TBD | Not started | - |
