@@ -29,11 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. User response flows back to Claude as structured result
   5. Server uses spawn with argument arrays (no command injection vulnerability)
   6. Tool times out after 5 minutes with error message
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Initialize TypeScript project with MCP SDK and stdio transport
+- [ ] 01-02-PLAN.md — Implement AskUserQuestion tool with emacsclient integration
 
 ### Phase 2: Error Handling & Reliability
 **Goal**: Server handles real-world failure modes gracefully without crashes or zombie processes
@@ -76,6 +76,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core MCP Server | 0/TBD | Not started | - |
+| 1. Core MCP Server | 0/2 | Not started | - |
 | 2. Error Handling & Reliability | 0/TBD | Not started | - |
 | 3. Emacs UX & Production Hardening | 0/TBD | Not started | - |
