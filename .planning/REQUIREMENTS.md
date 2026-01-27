@@ -20,23 +20,23 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TOOL-01**: Tool accepts `question` string parameter
 - [x] **TOOL-02**: Tool returns user's text response
 - [x] **TOOL-03**: Tool times out after 5 minutes with graceful error message
-- [ ] **TOOL-04**: Tool accepts optional `timeout` parameter (configurable per request)
+- [x] **TOOL-04**: Tool accepts optional `timeout` parameter (configurable per request)
 - [ ] **TOOL-05**: Tool logs Q&A to response history/audit trail
 
 ### Emacsclient Integration
 
 - [x] **EMACS-01**: Server spawns emacsclient using `spawn()` with argument arrays (secure)
-- [ ] **EMACS-02**: Server handles "Emacs server not running" with clear error message
-- [ ] **EMACS-03**: Server cleans up child processes on exit (signal handlers)
+- [x] **EMACS-02**: Server handles "Emacs server not running" with clear error message
+- [x] **EMACS-03**: Server cleans up child processes on exit (signal handlers)
 - [ ] **EMACS-04**: Custom `mr-x/ask-user-question` elisp function with styled prompts
 - [ ] **EMACS-05**: Fallback to plain `read-string` if custom function not defined
 
 ### Error Handling
 
-- [ ] **ERR-01**: Errors are classified by type (timeout, server unavailable, validation, etc.)
-- [ ] **ERR-02**: Server does not crash on malformed input
-- [ ] **ERR-03**: Server handles SIGINT and SIGTERM with cleanup
-- [ ] **ERR-04**: Structured logging via Pino to stderr
+- [x] **ERR-01**: Errors are classified by type (timeout, server unavailable, validation, etc.)
+- [x] **ERR-02**: Server does not crash on malformed input
+- [x] **ERR-03**: Server handles SIGINT and SIGTERM with cleanup
+- [x] **ERR-04**: Structured logging via Pino to stderr
 
 ### Documentation
 
@@ -91,17 +91,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOOL-01 | Phase 1 | Complete |
 | TOOL-02 | Phase 1 | Complete |
 | TOOL-03 | Phase 1 | Complete |
-| TOOL-04 | Phase 2 | Pending |
+| TOOL-04 | Phase 2 | Complete |
 | TOOL-05 | Phase 3 | Pending |
 | EMACS-01 | Phase 1 | Complete |
-| EMACS-02 | Phase 2 | Pending |
-| EMACS-03 | Phase 2 | Pending |
+| EMACS-02 | Phase 2 | Complete |
+| EMACS-03 | Phase 2 | Complete |
 | EMACS-04 | Phase 3 | Pending |
 | EMACS-05 | Phase 3 | Pending |
-| ERR-01 | Phase 2 | Pending |
-| ERR-02 | Phase 2 | Pending |
-| ERR-03 | Phase 2 | Pending |
-| ERR-04 | Phase 2 | Pending |
+| ERR-01 | Phase 2 | Complete |
+| ERR-02 | Phase 2 | Complete |
+| ERR-03 | Phase 2 | Complete |
+| ERR-04 | Phase 2 | Complete |
 | DOC-01 | Phase 3 | Pending |
 | DOC-02 | Phase 3 | Pending |
 | DOC-03 | Phase 3 | Pending |
