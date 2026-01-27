@@ -63,11 +63,11 @@ Plans:
   4. README enables user to configure agent-shell without assistance
   5. Emacs config snippet is copy-paste ready
   6. Troubleshooting guide covers common failure modes (Emacs server down, socket issues)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — Styled Emacs prompts with mr-x/ask-user-question and condition-case fallback
+- [ ] 03-02-PLAN.md — Q&A audit logging, README, and troubleshooting documentation
 
 ## Progress
 
@@ -78,4 +78,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Core MCP Server | 2/2 | Complete | 2026-01-26 |
 | 2. Error Handling & Reliability | 2/2 | Complete | 2026-01-26 |
-| 3. Emacs UX & Production Hardening | 0/TBD | Not started | - |
+| 3. Emacs UX & Production Hardening | 0/2 | Ready | - |
