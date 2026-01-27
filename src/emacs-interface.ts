@@ -1,72 +1,56 @@
 import { spawn, ChildProcess } from "child_process";
 import logger from "./logger.js";
+import { classifyEmacsError } from "./errors.js";
 
-/**
- * Track active child processes for cleanup on shutdown.
- */
 const activeProcesses = new Set<ChildProcess>();
 
-/**
- * Get active child processes for signal handler cleanup.
- */
 export function getActiveProcesses(): Set<ChildProcess> {
   return activeProcesses;
 }
 
-/**
- * Escape a string for safe inclusion in an elisp expression.
- * Prevents elisp code injection by escaping backslashes and quotes.
- */
+export interface AskOptions {
+  header?: string;
+  timeout_ms?: number;
+}
+
 function escapeElispString(str: string): string {
   return str
-    .replace(/\\/g, "\\\\")  // Escape backslashes first
-    .replace(/"/g, '\\"');    // Then escape quotes
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"');
 }
 
-/**
- * Wrap a promise with a timeout that rejects if the promise doesn't resolve in time.
- */
-function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  timeoutError: string
-): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(timeoutError)), timeoutMs)
-    ),
-  ]);
-}
-
-/**
- * Ask the user a question via Emacs minibuffer using emacsclient.
- * 
- * @param question The question to ask
- * @param header Optional header/context to show before the question
- * @returns Promise resolving to the user's response
- * @throws Error if emacsclient fails, times out, or is not available
- */
 export async function askViaEmacs(
   question: string,
-  header?: string
+  options: AskOptions = {}
 ): Promise<string> {
-  // Format prompt according to CONTEXT.md decisions
-  const prompt = header 
-    ? `${header}: ${question} > `
+  // Extract and validate timeout
+  const timeout = options.timeout_ms ?? 5 * 60 * 1000; // default 5 minutes
+  
+  if (timeout < 30_000) {
+    throw new Error("Timeout must be at least 30 seconds (30000 ms)");
+  }
+  if (timeout > 30 * 60_000) {
+    throw new Error("Timeout cannot exceed 30 minutes (1800000 ms)");
+  }
+
+  const timeoutSeconds = Math.round(timeout / 1000);
+  
+  logger.debug(
+    { question: question.slice(0, 50), timeout_ms: timeout },
+    "Asking question via Emacs"
+  );
+
+  const prompt = options.header 
+    ? `${options.header}: ${question} > `
     : `${question} > `;
 
-  // Build elisp expression with escaped prompt
   const escapedPrompt = escapeElispString(prompt);
   const elispExpr = `(ask-user-question "${escapedPrompt}")`;
 
-  // Create the emacsclient process with SECURE argument array (no shell injection)
   const proc = spawn("emacsclient", ["--eval", elispExpr]);
   
-  // Track process for cleanup on shutdown
   activeProcesses.add(proc);
 
-  // Collect output
   let stdout = "";
   let stderr = "";
 
@@ -78,41 +62,47 @@ export async function askViaEmacs(
     stderr += data.toString();
   });
 
-  // Wait for process to complete
-  const processPromise = new Promise<string>((resolve, reject) => {
+  // Manual timeout tracking (workaround for Node.js signal limitations)
+  let timedOut = false;
+  const timeoutTimer = setTimeout(() => {
+    timedOut = true;
+    proc.kill("SIGTERM");
+  }, timeout);
+
+  return new Promise<string>((resolve, reject) => {
     proc.on("close", (code) => {
-      // Remove from tracking on close
+      clearTimeout(timeoutTimer);
       activeProcesses.delete(proc);
       
+      if (timedOut) {
+        const errorMsg = `Question timed out after ${timeoutSeconds} seconds waiting for response. If you need more time, increase the timeout_ms parameter (max 30 minutes).`;
+        logger.error({ timeout_ms: timeout }, errorMsg);
+        reject(new Error(errorMsg));
+        return;
+      }
+
       if (code === 0) {
-        // Success - parse elisp return value
-        // emacsclient --eval returns strings with surrounding quotes: "user input"
         let result = stdout.trim();
         
-        // Strip outer quotes if present
         if (result.startsWith('"') && result.endsWith('"')) {
           result = result.slice(1, -1);
         }
         
+        logger.debug({ responseLength: result.length }, "Received response from Emacs");
         resolve(result);
       } else {
-        // Error - include stderr in error message
-        reject(new Error(`emacsclient exited with code ${code}: ${stderr}`));
+        const errorMsg = classifyEmacsError(stderr, code ?? 1);
+        logger.error({ code, stderr: stderr.trim() }, errorMsg);
+        reject(new Error(errorMsg));
       }
     });
 
     proc.on("error", (err) => {
-      // Remove from tracking on error
+      clearTimeout(timeoutTimer);
       activeProcesses.delete(proc);
-      // Process spawn failed (e.g., emacsclient not found)
-      reject(new Error(`Failed to spawn emacsclient: ${err.message}`));
+      const errorMsg = `Failed to spawn emacsclient: ${err.message}`;
+      logger.error({ err }, errorMsg);
+      reject(new Error(errorMsg));
     });
   });
-
-  // Wrap with 5-minute timeout
-  return withTimeout(
-    processPromise,
-    5 * 60 * 1000,
-    "Question timed out after 5 minutes"
-  );
 }
