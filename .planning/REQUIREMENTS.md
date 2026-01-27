@@ -21,15 +21,15 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TOOL-02**: Tool returns user's text response
 - [x] **TOOL-03**: Tool times out after 5 minutes with graceful error message
 - [x] **TOOL-04**: Tool accepts optional `timeout` parameter (configurable per request)
-- [ ] **TOOL-05**: Tool logs Q&A to response history/audit trail
+- [x] **TOOL-05**: Tool logs Q&A to response history/audit trail
 
 ### Emacsclient Integration
 
 - [x] **EMACS-01**: Server spawns emacsclient using `spawn()` with argument arrays (secure)
 - [x] **EMACS-02**: Server handles "Emacs server not running" with clear error message
 - [x] **EMACS-03**: Server cleans up child processes on exit (signal handlers)
-- [ ] **EMACS-04**: Custom `mr-x/ask-user-question` elisp function with styled prompts
-- [ ] **EMACS-05**: Fallback to plain `read-string` if custom function not defined
+- [x] **EMACS-04**: Custom `mr-x/ask-user-question` elisp function with styled prompts
+- [x] **EMACS-05**: Fallback to plain `read-string` if custom function not defined
 
 ### Error Handling
 
@@ -40,9 +40,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Documentation
 
-- [ ] **DOC-01**: README with setup instructions for agent-shell
-- [ ] **DOC-02**: Emacs config snippet (elisp function + agent-shell-mcp-servers)
-- [ ] **DOC-03**: Troubleshooting guide for common issues
+- [x] **DOC-01**: README with setup instructions for agent-shell
+- [x] **DOC-02**: Emacs config snippet (elisp function + agent-shell-mcp-servers)
+- [x] **DOC-03**: Troubleshooting guide for common issues
 
 ## v2 Requirements
 
@@ -92,19 +92,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOOL-02 | Phase 1 | Complete |
 | TOOL-03 | Phase 1 | Complete |
 | TOOL-04 | Phase 2 | Complete |
-| TOOL-05 | Phase 3 | Pending |
+| TOOL-05 | Phase 3 | Complete |
 | EMACS-01 | Phase 1 | Complete |
 | EMACS-02 | Phase 2 | Complete |
 | EMACS-03 | Phase 2 | Complete |
-| EMACS-04 | Phase 3 | Pending |
-| EMACS-05 | Phase 3 | Pending |
+| EMACS-04 | Phase 3 | Complete |
+| EMACS-05 | Phase 3 | Complete |
 | ERR-01 | Phase 2 | Complete |
 | ERR-02 | Phase 2 | Complete |
 | ERR-03 | Phase 2 | Complete |
 | ERR-04 | Phase 2 | Complete |
-| DOC-01 | Phase 3 | Pending |
-| DOC-02 | Phase 3 | Pending |
-| DOC-03 | Phase 3 | Pending |
+| DOC-01 | Phase 3 | Complete |
+| DOC-02 | Phase 3 | Complete |
+| DOC-03 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 22 total
