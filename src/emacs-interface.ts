@@ -35,10 +35,16 @@ export async function askViaEmacs(
 
   const timeoutSeconds = Math.round(timeout / 1000);
   
-  logger.debug(
-    { question: question.slice(0, 50), timeout_ms: timeout },
-    "Asking question via Emacs"
-  );
+  // Create child logger for Q&A audit trail
+  const startTime = Date.now();
+  const qaLogger = logger.child({
+    component: 'ask-user',
+    question: question.slice(0, 100), // truncate for logs
+    header: options.header,
+    timeout_ms: timeout,
+  });
+
+  qaLogger.debug('Q&A initiated');
 
   const escapedQuestion = escapeElispString(question);
   const headerArg = options.header 
@@ -83,7 +89,11 @@ export async function askViaEmacs(
       
       if (timedOut) {
         const errorMsg = `Question timed out after ${timeoutSeconds} seconds waiting for response. If you need more time, increase the timeout_ms parameter (max 30 minutes).`;
-        logger.error({ timeout_ms: timeout }, errorMsg);
+        qaLogger.debug({
+          error: errorMsg,
+          duration_ms: Date.now() - startTime,
+          success: false,
+        }, 'Q&A failed');
         reject(new Error(errorMsg));
         return;
       }
@@ -95,11 +105,19 @@ export async function askViaEmacs(
           result = result.slice(1, -1);
         }
         
-        logger.debug({ responseLength: result.length }, "Received response from Emacs");
+        qaLogger.debug({
+          response: result.slice(0, 100), // truncate for logs
+          duration_ms: Date.now() - startTime,
+          success: true,
+        }, 'Q&A completed');
         resolve(result);
       } else {
         const errorMsg = classifyEmacsError(stderr, code ?? 1);
-        logger.error({ code, stderr: stderr.trim() }, errorMsg);
+        qaLogger.debug({
+          error: errorMsg,
+          duration_ms: Date.now() - startTime,
+          success: false,
+        }, 'Q&A failed');
         reject(new Error(errorMsg));
       }
     });
@@ -108,7 +126,11 @@ export async function askViaEmacs(
       clearTimeout(timeoutTimer);
       activeProcesses.delete(proc);
       const errorMsg = `Failed to spawn emacsclient: ${err.message}`;
-      logger.error({ err }, errorMsg);
+      qaLogger.debug({
+        error: errorMsg,
+        duration_ms: Date.now() - startTime,
+        success: false,
+      }, 'Q&A failed');
       reject(new Error(errorMsg));
     });
   });
