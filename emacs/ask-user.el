@@ -3,13 +3,31 @@
 ;;; Commentary:
 ;; Provides minibuffer prompting for the ask-user-mcp server.
 ;; Load this file in your Emacs config to enable AskUserQuestion tool support.
+;;
+;; Usage:
+;;   (mr-x/ask-user-question "What is your name?")
+;;   (mr-x/ask-user-question "Pick color" "Color")  ; with header
 
 ;;; Code:
 
-(defun ask-user-question (prompt)
-  "Prompt user with PROMPT in minibuffer and return their response.
-PROMPT is the formatted question string from the MCP server."
-  (read-from-minibuffer prompt))
+(defun mr-x/ask-user-question (question &optional header timeout-ms)
+  "Prompt user with QUESTION in minibuffer and return their response.
+QUESTION is the question text from the MCP server.
+HEADER is an optional context string displayed in parentheses.
+TIMEOUT-MS is reserved for future use (currently ignored).
+
+The prompt is styled with bold 'Claude asks:' prefix for visibility."
+  (let* ((prefix (if header
+                     (propertize (format "Claude asks (%s): " header) 'face 'bold)
+                   (propertize "Claude asks: " 'face 'bold)))
+         (question-styled (propertize question 'face 'minibuffer-prompt))
+         (full-prompt (concat prefix question-styled " ")))
+    (read-string full-prompt)))
+
+;; Backwards compatibility alias
+(defalias 'ask-user-question 'mr-x/ask-user-question
+  "Legacy alias for `mr-x/ask-user-question'.
+Kept for backwards compatibility with older server versions.")
 
 (provide 'ask-user)
 
