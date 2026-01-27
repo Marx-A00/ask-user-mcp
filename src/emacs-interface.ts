@@ -40,12 +40,19 @@ export async function askViaEmacs(
     "Asking question via Emacs"
   );
 
-  const prompt = options.header 
-    ? `${options.header}: ${question} > `
-    : `${question} > `;
-
-  const escapedPrompt = escapeElispString(prompt);
-  const elispExpr = `(ask-user-question "${escapedPrompt}")`;
+  const escapedQuestion = escapeElispString(question);
+  const headerArg = options.header 
+    ? `"${escapeElispString(options.header)}"` 
+    : "nil";
+  
+  // Build elisp with condition-case for graceful fallback
+  // If mr-x/ask-user-question is not defined, falls back to read-string
+  const elispExpr = `(condition-case err
+    (mr-x/ask-user-question "${escapedQuestion}" ${headerArg})
+  (void-function
+    (progn
+      (message "ask-user-mcp: mr-x/ask-user-question not defined, using read-string")
+      (read-string "Claude asks: ${escapedQuestion} "))))`;
 
   const proc = spawn("emacsclient", ["--eval", elispExpr]);
   
