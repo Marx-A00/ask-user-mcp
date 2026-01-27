@@ -46,11 +46,11 @@ Plans:
   4. Timeout messages explain why timeout occurred and how to fix
   5. Configurable timeout parameter works per tool call
   6. All errors are logged with structured format to stderr
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — Set up Pino logging and signal handlers with child process cleanup
+- [ ] 02-02-PLAN.md — Implement error classification and configurable timeout parameter
 
 ### Phase 3: Emacs UX & Production Hardening
 **Goal**: Prompts use Emacs styling, server has production observability, and users can self-service setup
@@ -77,5 +77,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core MCP Server | 2/2 | Complete | 2026-01-26 |
-| 2. Error Handling & Reliability | 0/TBD | Not started | - |
+| 2. Error Handling & Reliability | 0/2 | Planned | - |
 | 3. Emacs UX & Production Hardening | 0/TBD | Not started | - |
