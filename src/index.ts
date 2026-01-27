@@ -2,7 +2,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { askViaEmacs } from "./emacs-interface.js";
+import { askViaEmacs, getActiveProcesses } from "./emacs-interface.js";
+import logger from "./logger.js";
 
 const server = new McpServer({
   name: "ask-user-mcp",
@@ -45,13 +46,34 @@ server.registerTool(
   }
 );
 
+/**
+ * Graceful shutdown handler - terminates active child processes.
+ */
+function gracefulShutdown(signal: string): void {
+  const processes = getActiveProcesses();
+  logger.info({ signal, activeCount: processes.size }, "Shutting down");
+
+  for (const proc of processes) {
+    if (!proc.killed) {
+      logger.info({ pid: proc.pid }, "Terminated pending emacsclient process");
+      proc.kill("SIGTERM");
+    }
+  }
+
+  process.exitCode = 0;
+}
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Ask User MCP Server running on stdio");
+  logger.info("Ask User MCP Server running on stdio");
+
+  // Install signal handlers for graceful shutdown
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 }
 
 main().catch((error) => {
-  console.error("Fatal error in main():", error);
+  logger.error({ err: error }, "Fatal error in main()");
   process.exit(1);
 });

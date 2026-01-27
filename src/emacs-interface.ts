@@ -1,4 +1,17 @@
-import { spawn } from "child_process";
+import { spawn, ChildProcess } from "child_process";
+import logger from "./logger.js";
+
+/**
+ * Track active child processes for cleanup on shutdown.
+ */
+const activeProcesses = new Set<ChildProcess>();
+
+/**
+ * Get active child processes for signal handler cleanup.
+ */
+export function getActiveProcesses(): Set<ChildProcess> {
+  return activeProcesses;
+}
 
 /**
  * Escape a string for safe inclusion in an elisp expression.
@@ -49,6 +62,9 @@ export async function askViaEmacs(
 
   // Create the emacsclient process with SECURE argument array (no shell injection)
   const proc = spawn("emacsclient", ["--eval", elispExpr]);
+  
+  // Track process for cleanup on shutdown
+  activeProcesses.add(proc);
 
   // Collect output
   let stdout = "";
@@ -65,6 +81,9 @@ export async function askViaEmacs(
   // Wait for process to complete
   const processPromise = new Promise<string>((resolve, reject) => {
     proc.on("close", (code) => {
+      // Remove from tracking on close
+      activeProcesses.delete(proc);
+      
       if (code === 0) {
         // Success - parse elisp return value
         // emacsclient --eval returns strings with surrounding quotes: "user input"
@@ -83,6 +102,8 @@ export async function askViaEmacs(
     });
 
     proc.on("error", (err) => {
+      // Remove from tracking on error
+      activeProcesses.delete(proc);
       // Process spawn failed (e.g., emacsclient not found)
       reject(new Error(`Failed to spawn emacsclient: ${err.message}`));
     });
