@@ -10,19 +10,27 @@ const server = new McpServer({
   version: "1.0.0",
 });
 
-// Register AskUserQuestion tool
 server.registerTool(
   "AskUserQuestion",
   {
     description: "Ask the user a question via Emacs minibuffer and wait for their response. Use this when you need clarification or user input.",
     inputSchema: {
-      question: z.string().describe("The question to ask the user"),
+      question: z.string().min(1, "Question cannot be empty").describe("The question to ask the user"),
       header: z.string().optional().describe("Optional header/context shown before the question"),
+      timeout_ms: z
+        .number()
+        .min(30000, "Timeout must be at least 30 seconds")
+        .max(30 * 60000, "Timeout cannot exceed 30 minutes")
+        .optional()
+        .describe("Timeout in milliseconds (default: 300000 = 5 minutes)"),
     },
   },
   async (args) => {
     try {
-      const response = await askViaEmacs(args.question, args.header);
+      const response = await askViaEmacs(args.question, {
+        header: args.header,
+        timeout_ms: args.timeout_ms,
+      });
       return {
         content: [
           {
@@ -32,9 +40,10 @@ server.registerTool(
         ],
       };
     } catch (error) {
-      // Return errors as content so Claude sees them (don't throw)
       const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn({ error: errorMessage }, "Tool call failed");
       return {
+        isError: true,
         content: [
           {
             type: "text",
@@ -46,9 +55,6 @@ server.registerTool(
   }
 );
 
-/**
- * Graceful shutdown handler - terminates active child processes.
- */
 function gracefulShutdown(signal: string): void {
   const processes = getActiveProcesses();
   logger.info({ signal, activeCount: processes.size }, "Shutting down");
@@ -68,7 +74,6 @@ async function main() {
   await server.connect(transport);
   logger.info("Ask User MCP Server running on stdio");
 
-  // Install signal handlers for graceful shutdown
   process.on("SIGINT", () => gracefulShutdown("SIGINT"));
   process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 }
