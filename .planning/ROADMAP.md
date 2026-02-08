@@ -18,11 +18,12 @@ Each phase delivers a complete, verifiable capability that builds toward the fin
 
 **Dependencies:** None (builds on v1 emacsclient integration)
 
-**Plans:** 2 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Core buffer infrastructure (mode, display, blocking, cleanup)
-- [ ] 04-02-PLAN.md — Integration verification and human approval
+- [x] 04-01-PLAN.md — Core buffer infrastructure (mode, display, blocking, cleanup)
+- [x] 04-02-PLAN.md — Integration verification and human approval
+- [ ] 04-03-PLAN.md — Gap closure: Wire MCP server to v2 popup function
 
 **Requirements:**
 - POPUP-01: Popup buffer appears at bottom of frame (~40% height)
@@ -84,11 +85,11 @@ Plans:
 
 | Phase | Status | Requirements | Completion |
 |-------|--------|--------------|------------|
-| Phase 4: Core Popup Infrastructure | Planned | 8/21 | 0% |
+| Phase 4: Core Popup Infrastructure | In Progress | 8/21 | ~90% |
 | Phase 5: Selection and Free-Text Modes | Pending | 12/21 | 0% |
 | Phase 6: Enhanced Navigation | Pending | 1/21 | 0% |
 
-**Overall:** 0/21 requirements complete (0%)
+**Overall:** ~8/21 requirements complete (~38%)
 
 ---
 *Roadmap created: 2026-02-08*
