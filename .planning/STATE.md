@@ -20,23 +20,22 @@ Replace minibuffer prompts with a proper popup buffer UI that feels native to Em
 ## Current Position
 
 **Phase:** 5 of 6 - Selection and Free-text Modes
-**Plan:** 1 of 4 complete
+**Plan:** 2 of 4 complete
 **Status:** In progress
-**Last activity:** 2026-02-08 - Completed 05-01-PLAN.md
+**Last activity:** 2026-02-08 - Completed 05-02-PLAN.md
 
 **Progress:**
 ```
-[██████████████------------] 52% (11/21 requirements)
+[███████████████-----------] 57% (12/21 requirements)
 Phase 4: [████████] 8/8 ✓ Complete
-Phase 5: [███-----] 3/12 (selection mode complete)
+Phase 5: [██████--] 6/12 (selection + free-text modes complete)
 Phase 6: [--------] 0/1
 ```
 
 **Next Steps:**
-1. Implement free-text input mode (05-02)
-2. Add mode-switching logic based on options presence
-3. Update Node.js server to pass options array
-4. End-to-end integration testing
+1. Add mode-switching logic based on options presence (05-03)
+2. Update Node.js server to pass options array (05-04)
+3. End-to-end integration testing
 
 ## Performance Metrics
 
@@ -49,10 +48,10 @@ Phase 6: [--------] 0/1
 
 **Actual:**
 - Start date: 2026-02-08
-- Requirements complete: 11/21 (52%)
-- Phases complete: 1.25/3
+- Requirements complete: 12/21 (57%)
+- Phases complete: 1.5/3
 - Phase 4 duration: ~30 minutes total (3 plans)
-- Phase 5 progress: ~6 minutes (1 of 4 plans)
+- Phase 5 progress: ~11 minutes (2 of 4 plans)
 
 ### Historical (v1)
 
@@ -68,6 +67,11 @@ Phase 6: [--------] 0/1
 
 | Date       | Phase  | Decision                                      | Rationale                                                  |
 | ---------- | ------ | --------------------------------------------- | ---------------------------------------------------------- |
+| 2026-02-08 | 05-02  | C-n from last option enters text field        | Natural keyboard flow between options and text             |
+| 2026-02-08 | 05-02  | RET submits single-line, C-c C-c multi-line   | RET is quick for common case, C-c C-c is standard finish   |
+| 2026-02-08 | 05-02  | C-j/S-RET inserts newlines                    | Standard Emacs pattern for newline without submit          |
+| 2026-02-08 | 05-02  | Option selection discards typed text          | Selection is explicit intent, option wins over text        |
+| 2026-02-08 | 05-02  | Pure text mode when OPTIONS is nil            | Simplifies UI when no options exist                        |
 | 2026-02-08 | 05-01  | Use :inverse-video for selection highlight    | Classic Emacs look, works in all themes, no face defs     |
 | 2026-02-08 | 05-01  | Mod arithmetic for wrap-around                | Elegant handling of both forward/backward navigation       |
 | 2026-02-08 | 05-01  | Text properties for option indexing           | Enables mouse support, simplifies overlay positioning      |
@@ -102,7 +106,10 @@ Phase 6: [--------] 0/1
 - [x] Create overlay for selection highlighting
 - [x] Implement C-n/C-p keybindings
 - [x] Options rendering as numbered list
-- [ ] Implement free-text input mode
+- [x] Implement free-text input mode
+- [x] Text field rendering with focus management
+- [x] Text editing and submission (RET, C-c C-c, C-j)
+- [x] Combined mode end-to-end verification
 - [ ] Add mode-switching logic (options vs free-text)
 - [ ] Update Node.js to pass options array
 - [ ] Test timeout behavior with popup
@@ -123,32 +130,39 @@ None currently.
 
 ### What Just Happened
 
-**2026-02-08:** Completed Phase 5 Plan 01 (Selection Mode):
-- **05-01:** Implemented C-n/C-p navigation with visual highlighting
-  - Options render as numbered list with text properties
-  - Inverse-video overlay highlights current selection
-  - Navigation wraps at list boundaries
-  - RET confirms and returns selected option
+**2026-02-08:** Completed Phase 5 Plan 02 (Free-text Mode):
+- **05-02:** Implemented text input field with multi-line support
+  - Text field renders below options with visual separator
+  - Tab switches focus between options and text
+  - C-n from last option enters text, C-p from text returns to options
+  - RET submits single-line, C-c C-c submits multi-line
+  - C-j/S-RET inserts newlines
+  - Option selection discards typed text (option wins)
+  - Pure text mode when no options provided
   - All automated tests passing
 
-Selection mode is functionally complete and ready for integration. Next: implement free-text input mode for when no options are provided.
+Both selection and free-text modes are now complete and working together seamlessly. Next: mode-switching logic and Node.js integration.
 
 ### For Next Session
 
 **Phase 5 continuation:**
 1. Read ROADMAP.md Phase 5 section for remaining tasks
-2. Run `/gsd:execute-plan` for 05-02 (free-text mode)
-3. Focus on input field and text collection
-4. Test both modes (options vs free-text)
+2. Run `/gsd:execute-plan` for 05-03 (mode-switching logic)
+3. Focus on detecting when to show options vs text-only
+4. Update Node.js server to pass options array (05-04)
 
 **If context lost:**
 1. Read this STATE.md for current position
-2. Read `.planning/phases/05-selection-and-free-text-modes/05-01-SUMMARY.md` for latest delivery
-3. Load `emacs/ask-user-popup.el` and test selection mode:
+2. Read `.planning/phases/05-selection-and-free-text-modes/05-02-SUMMARY.md` for latest delivery
+3. Load `emacs/ask-user-popup.el` and test dual mode:
    ```elisp
-   (mr-x/ask-user-popup "Choose" "Pick one" '("A" "B" "C"))
+   ;; Options + text
+   (mr-x/ask-user-popup "Choose" "Pick one or type" '("A" "B" "C"))
+   
+   ;; Pure text
+   (mr-x/ask-user-popup "Describe" "Be detailed" nil)
    ```
-4. Run `./test-selection-mode.sh` to verify selection mode
+4. Run `./test-free-text-mode.sh` to verify free-text mode
 5. Check ROADMAP.md for Phase 5 remaining work
 
 ---
