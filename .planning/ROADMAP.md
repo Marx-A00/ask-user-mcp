@@ -1,81 +1,89 @@
-# Roadmap: AskUserQuestion MCP Server
+# Roadmap: AskUserQuestion MCP Server v2
+
+**Milestone:** v2 Popup UI
+**Goal:** Replace minibuffer prompts with a proper popup buffer UI that feels native to Emacs
+**Phases:** 3 (continues from v1 which ended at Phase 3)
 
 ## Overview
 
-Build an MCP server that bridges Claude's AskUserQuestion tool calls to Emacs minibuffer prompts via emacsclient. The journey progresses from protocol-compliant core (security and architecture foundation) to production-ready reliability (error handling and graceful degradation) to polished user experience (Emacs styling and observability).
+This roadmap transforms the v1 minibuffer-based question prompts into a proper popup buffer UI. Phase 4 establishes the core popup infrastructure with proper positioning, blocking behavior, and cleanup. Phase 5 adds the dual interaction modes (selection with navigation and free-text input) and integrates them with the existing Node.js MCP server. Phase 6 polishes the experience with number key quick-select for efficient option selection.
+
+Each phase delivers a complete, verifiable capability that builds toward the final popup UI experience.
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+### Phase 4: Core Popup Infrastructure
 
-Decimal phases appear between their surrounding integers in numeric order.
+**Goal:** Users see questions in a dedicated popup buffer at bottom of frame
 
-- [x] **Phase 1: Core MCP Server** - Protocol-compliant foundation with secure emacsclient integration
-- [x] **Phase 2: Error Handling & Reliability** - Graceful degradation and production-ready resilience
-- [x] **Phase 3: Emacs UX & Production Hardening** - Styled prompts, observability, and documentation
+**Dependencies:** None (builds on v1 emacsclient integration)
 
-## Phase Details
+**Requirements:**
+- POPUP-01: Popup buffer appears at bottom of frame (~40% height)
+- POPUP-02: Buffer uses dedicated major mode (special-mode derived)
+- POPUP-03: Buffer blocks until user responds (recursive-edit pattern)
+- POPUP-04: Buffer cleanup on exit (no orphaned buffers)
+- POPUP-05: C-g cancels and returns error to Claude
+- VIS-01: Question/header displayed prominently at top
+- VIS-02: Description (if provided) displayed below header
+- VIS-03: Options or text area clearly separated from header
 
-### Phase 1: Core MCP Server
-**Goal**: Claude can ask questions via MCP protocol that appear in Emacs minibuffer and receive user responses securely
-**Depends on**: Nothing (first phase)
-**Requirements**: MCP-01, MCP-02, MCP-03, MCP-04, MCP-05, TOOL-01, TOOL-02, TOOL-03, EMACS-01
-**Success Criteria** (what must be TRUE):
-  1. Server implements JSON-RPC 2.0 with stdio transport (Claude can connect)
-  2. Tool declaration appears in tools/list (Claude can discover AskUserQuestion)
-  3. Question sent by Claude appears in Emacs minibuffer
-  4. User response flows back to Claude as structured result
-  5. Server uses spawn with argument arrays (no command injection vulnerability)
-  6. Tool times out after 5 minutes with error message
-**Plans**: 2 plans
+**Success Criteria:**
+1. Popup appears at bottom of Emacs frame (~40% height) when Claude asks a question
+2. Question and description display clearly in read-only buffer
+3. C-g cancels and returns error to Claude
+4. Popup buffer cleans up automatically after response (no orphaned buffers)
 
-Plans:
-- [x] 01-01-PLAN.md — Initialize TypeScript project with MCP SDK and stdio transport
-- [x] 01-02-PLAN.md — Implement AskUserQuestion tool with emacsclient integration
+### Phase 5: Selection and Free-Text Modes
 
-### Phase 2: Error Handling & Reliability
-**Goal**: Server handles real-world failure modes gracefully without crashes or zombie processes
-**Depends on**: Phase 1
-**Requirements**: TOOL-04, EMACS-02, EMACS-03, ERR-01, ERR-02, ERR-03, ERR-04
-**Success Criteria** (what must be TRUE):
-  1. Server detects when Emacs server is not running and returns actionable error
-  2. Server handles SIGINT and SIGTERM with child process cleanup
-  3. Server survives malformed tool input without crashing
-  4. Timeout messages explain why timeout occurred and how to fix
-  5. Configurable timeout parameter works per tool call
-  6. All errors are logged with structured format to stderr
-**Plans**: 2 plans
+**Goal:** Users can navigate and select from options OR type free-form responses
 
-Plans:
-- [x] 02-01-PLAN.md — Set up Pino logging and signal handlers with child process cleanup
-- [x] 02-02-PLAN.md — Implement error classification and configurable timeout parameter
+**Dependencies:** Phase 4 (requires popup infrastructure)
 
-### Phase 3: Emacs UX & Production Hardening
-**Goal**: Prompts use Emacs styling, server has production observability, and users can self-service setup
-**Depends on**: Phase 2
-**Requirements**: TOOL-05, EMACS-04, EMACS-05, DOC-01, DOC-02, DOC-03
-**Success Criteria** (what must be TRUE):
-  1. Questions use custom styled Emacs function (visually distinct from plain prompts)
-  2. Fallback to read-string works if custom function not defined
-  3. Q&A history logged to audit trail for debugging
-  4. README enables user to configure agent-shell without assistance
-  5. Emacs config snippet is copy-paste ready
-  6. Troubleshooting guide covers common failure modes (Emacs server down, socket issues)
-**Plans**: 2 plans
+**Requirements:**
+- SEL-01: Tool accepts `options` array parameter for multiple choice
+- SEL-02: Options display as selectable list in popup
+- SEL-03: C-n/C-p navigation between options
+- SEL-04: Current selection highlighted with distinct face
+- SEL-05: RET confirms and returns selected option
+- TEXT-01: When no options provided, popup shows editable text area
+- TEXT-02: User can type multi-line response
+- TEXT-03: C-c C-c or RET submits response
+- INT-01: Node.js passes options array via emacsclient
+- INT-02: Return value properly escaped for MCP response
+- INT-03: Fallback to v1 minibuffer if popup function not defined
+- INT-04: Timeout still works (5 minutes default)
 
-Plans:
-- [x] 03-01-PLAN.md — Styled Emacs prompts with mr-x/ask-user-question and condition-case fallback
-- [x] 03-02-PLAN.md — Q&A audit logging, README, and troubleshooting documentation
+**Success Criteria:**
+1. When Claude provides options, user can navigate with C-n/C-p and see highlighted selection
+2. RET selects current option and returns it to Claude
+3. When no options provided, user can type multi-line response and submit with C-c C-c or RET
+4. Node.js timeout (5 minutes) still works with popup UI
+5. Falls back to minibuffer if popup function not available
+
+### Phase 6: Enhanced Navigation
+
+**Goal:** Users can quickly select options using number keys
+
+**Dependencies:** Phase 5 (requires selection mode)
+
+**Requirements:**
+- SEL-06: Number keys (1-9) for quick select
+
+**Success Criteria:**
+1. Number keys 1-9 instantly select corresponding option
+2. Selection works for lists up to 9 items
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3
+| Phase | Status | Requirements | Completion |
+|-------|--------|--------------|------------|
+| Phase 4: Core Popup Infrastructure | Pending | 8/21 | 0% |
+| Phase 5: Selection and Free-Text Modes | Pending | 12/21 | 0% |
+| Phase 6: Enhanced Navigation | Pending | 1/21 | 0% |
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Core MCP Server | 2/2 | Complete | 2026-01-26 |
-| 2. Error Handling & Reliability | 2/2 | Complete | 2026-01-26 |
-| 3. Emacs UX & Production Hardening | 2/2 | Complete | 2026-01-27 |
+**Overall:** 0/21 requirements complete (0%)
+
+---
+*Roadmap created: 2026-02-08*
+*Last updated: 2026-02-08*

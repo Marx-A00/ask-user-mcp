@@ -107,8 +107,6 @@ Explicitly excluded. Documented to prevent scope creep.
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | POPUP-01 | Phase 4 | Pending |
@@ -138,6 +136,845 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Mapped to phases: 21
 - Unmapped: 0 ✓
 
----
-*Requirements defined: 2025-01-26 (v1)*
-*Last updated: 2026-02-08 after v2 milestone start*
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| POPUP-01 | Phase 4 | Pending |
+| POPUP-02 | Phase 4 | Pending |
+| POPUP-03 | Phase 4 | Pending |
+| POPUP-04 | Phase 4 | Pending |
+| POPUP-05 | Phase 4 | Pending |
+| SEL-01 | Phase 5 | Pending |
+| SEL-02 | Phase 5 | Pending |
+| SEL-03 | Phase 5 | Pending |
+| SEL-04 | Phase 5 | Pending |
+| SEL-05 | Phase 5 | Pending |
+| SEL-06 | Phase 6 | Pending |
+| TEXT-01 | Phase 5 | Pending |
+| TEXT-02 | Phase 5 | Pending |
+| TEXT-03 | Phase 5 | Pending |
+| VIS-01 | Phase 4 | Pending |
+| VIS-02 | Phase 4 | Pending |
+| VIS-03 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
+
+**Coverage:**
+- v2 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0 ✓
