@@ -18,6 +18,12 @@ Each phase delivers a complete, verifiable capability that builds toward the fin
 
 **Dependencies:** None (builds on v1 emacsclient integration)
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Core buffer infrastructure (mode, display, blocking, cleanup)
+- [ ] 04-02-PLAN.md — Integration verification and human approval
+
 **Requirements:**
 - POPUP-01: Popup buffer appears at bottom of frame (~40% height)
 - POPUP-02: Buffer uses dedicated major mode (special-mode derived)
@@ -78,7 +84,7 @@ Each phase delivers a complete, verifiable capability that builds toward the fin
 
 | Phase | Status | Requirements | Completion |
 |-------|--------|--------------|------------|
-| Phase 4: Core Popup Infrastructure | Pending | 8/21 | 0% |
+| Phase 4: Core Popup Infrastructure | Planned | 8/21 | 0% |
 | Phase 5: Selection and Free-Text Modes | Pending | 12/21 | 0% |
 | Phase 6: Enhanced Navigation | Pending | 1/21 | 0% |
 
