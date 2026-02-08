@@ -19,24 +19,24 @@ Replace minibuffer prompts with a proper popup buffer UI that feels native to Em
 
 ## Current Position
 
-**Phase:** 4 of 6 - Core Popup Infrastructure ✓
-**Plan:** 3 of 3 complete
-**Status:** Phase complete
-**Last activity:** 2026-02-08 - Completed Phase 4 execution
+**Phase:** 5 of 6 - Selection and Free-text Modes
+**Plan:** 1 of 4 complete
+**Status:** In progress
+**Last activity:** 2026-02-08 - Completed 05-01-PLAN.md
 
 **Progress:**
 ```
-[████████████--------------] 38% (8/21 requirements)
+[██████████████------------] 52% (11/21 requirements)
 Phase 4: [████████] 8/8 ✓ Complete
-Phase 5: [--------] 0/12
+Phase 5: [███-----] 3/12 (selection mode complete)
 Phase 6: [--------] 0/1
 ```
 
 **Next Steps:**
-1. Plan Phase 5 for interaction modes
-2. Implement selection mode (C-n/C-p navigation)
-3. Implement free-text mode
-4. Update Node.js to pass options array
+1. Implement free-text input mode (05-02)
+2. Add mode-switching logic based on options presence
+3. Update Node.js server to pass options array
+4. End-to-end integration testing
 
 ## Performance Metrics
 
@@ -49,9 +49,10 @@ Phase 6: [--------] 0/1
 
 **Actual:**
 - Start date: 2026-02-08
-- Requirements complete: 8/21 (38%)
-- Phases complete: 1/3
+- Requirements complete: 11/21 (52%)
+- Phases complete: 1.25/3
 - Phase 4 duration: ~30 minutes total (3 plans)
+- Phase 5 progress: ~6 minutes (1 of 4 plans)
 
 ### Historical (v1)
 
@@ -67,6 +68,9 @@ Phase 6: [--------] 0/1
 
 | Date       | Phase  | Decision                                      | Rationale                                                  |
 | ---------- | ------ | --------------------------------------------- | ---------------------------------------------------------- |
+| 2026-02-08 | 05-01  | Use :inverse-video for selection highlight    | Classic Emacs look, works in all themes, no face defs     |
+| 2026-02-08 | 05-01  | Mod arithmetic for wrap-around                | Elegant handling of both forward/backward navigation       |
+| 2026-02-08 | 05-01  | Text properties for option indexing           | Enables mouse support, simplifies overlay positioning      |
 | 2026-02-08 | 04-03  | Graceful 3-tier fallback chain                | popup → v1 minibuffer → read-string for max compatibility  |
 | 2026-02-08 | 04-03  | Renamed headerArg to descriptionArg           | Semantic clarity - maps to v2 popup's description param    |
 | 2026-02-08 | 04-02  | Single newline between title and description  | User feedback - improves visual hierarchy and compactness  |
@@ -94,9 +98,11 @@ Phase 6: [--------] 0/1
 - [x] Refine spacing based on user feedback
 - [x] Wire MCP server to call v2 popup function
 
-**Phase 5 (Next):**
-- [ ] Create overlay for selection highlighting
-- [ ] Implement C-n/C-p keybindings
+**Phase 5 (In Progress):**
+- [x] Create overlay for selection highlighting
+- [x] Implement C-n/C-p keybindings
+- [x] Options rendering as numbered list
+- [ ] Implement free-text input mode
 - [ ] Add mode-switching logic (options vs free-text)
 - [ ] Update Node.js to pass options array
 - [ ] Test timeout behavior with popup
@@ -117,27 +123,33 @@ None currently.
 
 ### What Just Happened
 
-**2026-02-08:** Phase 4 execution completed with all 3 plans:
-- **04-01:** Created emacs/ask-user-popup.el with core popup infrastructure
-- **04-02:** Integrated popup module loading, created test script, user verified visual layout
-- **04-03:** Wired MCP server to call v2 popup function with graceful fallback chain
+**2026-02-08:** Completed Phase 5 Plan 01 (Selection Mode):
+- **05-01:** Implemented C-n/C-p navigation with visual highlighting
+  - Options render as numbered list with text properties
+  - Inverse-video overlay highlights current selection
+  - Navigation wraps at list boundaries
+  - RET confirms and returns selected option
+  - All automated tests passing
 
-Phase verified as passed (8/8 must-haves). End-to-end flow now complete: MCP tool → server → emacsclient → mr-x/ask-user-popup → popup buffer → user response → Claude.
+Selection mode is functionally complete and ready for integration. Next: implement free-text input mode for when no options are provided.
 
 ### For Next Session
 
-**Phase 5 planning:**
-1. Read ROADMAP.md Phase 5 section for goals
-2. Run `/gsd:plan-phase 5` to create execution plans
-3. Focus on options mode first (rendering + C-n/C-p navigation)
-4. Test with emacsclient before integrating Node.js
+**Phase 5 continuation:**
+1. Read ROADMAP.md Phase 5 section for remaining tasks
+2. Run `/gsd:execute-plan` for 05-02 (free-text mode)
+3. Focus on input field and text collection
+4. Test both modes (options vs free-text)
 
 **If context lost:**
 1. Read this STATE.md for current position
-2. Read `.planning/phases/04-core-popup-infrastructure/04-03-SUMMARY.md` for latest delivery
-3. Load `emacs/ask-user-popup.el` and test `(mr-x/ask-user-popup "Test?" "Desc")` to verify infrastructure
-4. Run `./test-ask.sh` to verify emacsclient integration
-5. Check ROADMAP.md for Phase 5 requirements
+2. Read `.planning/phases/05-selection-and-free-text-modes/05-01-SUMMARY.md` for latest delivery
+3. Load `emacs/ask-user-popup.el` and test selection mode:
+   ```elisp
+   (mr-x/ask-user-popup "Choose" "Pick one" '("A" "B" "C"))
+   ```
+4. Run `./test-selection-mode.sh` to verify selection mode
+5. Check ROADMAP.md for Phase 5 remaining work
 
 ---
 *Last updated: 2026-02-08*
