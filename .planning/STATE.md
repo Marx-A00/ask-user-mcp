@@ -19,23 +19,24 @@ Replace minibuffer prompts with a proper popup buffer UI that feels native to Em
 
 ## Current Position
 
-**Phase:** 4 of 3 - Core Popup Infrastructure
+**Phase:** 4 of 6 - Core Popup Infrastructure ✓
 **Plan:** 3 of 3 complete
 **Status:** Phase complete
-**Last activity:** 2026-02-08 - Completed 04-03-PLAN.md
+**Last activity:** 2026-02-08 - Completed Phase 4 execution
 
 **Progress:**
 ```
 [████████████--------------] 38% (8/21 requirements)
-Phase 4: [████████████] 12/12 ✓
-Phase 5: [--------] 0/8
+Phase 4: [████████] 8/8 ✓ Complete
+Phase 5: [--------] 0/12
 Phase 6: [--------] 0/1
 ```
 
 **Next Steps:**
-1. Execute Phase 5 plans for interaction modes
-2. Test end-to-end flow with MCP tool call
-3. Implement options mode and free-text mode
+1. Plan Phase 5 for interaction modes
+2. Implement selection mode (C-n/C-p navigation)
+3. Implement free-text mode
+4. Update Node.js to pass options array
 
 ## Performance Metrics
 
@@ -48,10 +49,9 @@ Phase 6: [--------] 0/1
 
 **Actual:**
 - Start date: 2026-02-08
-- Requirements complete: 12/21 (57%)
-- Phases complete: 1/3 (Phase 4)
-- Current phase duration: <1 day
-- Phase 4 total: 70s + 15min + 64s = ~17 minutes
+- Requirements complete: 8/21 (38%)
+- Phases complete: 1/3
+- Phase 4 duration: ~30 minutes total (3 plans)
 
 ### Historical (v1)
 
@@ -67,8 +67,8 @@ Phase 6: [--------] 0/1
 
 | Date       | Phase  | Decision                                      | Rationale                                                  |
 | ---------- | ------ | --------------------------------------------- | ---------------------------------------------------------- |
-| 2026-02-08 | 04-03  | Graceful fallback chain: v2->v1->read-string  | Ensures tool works regardless of user's ask-user.el version|
-| 2026-02-08 | 04-03  | Renamed headerArg to descriptionArg           | Matches v2 function signature and semantic meaning         |
+| 2026-02-08 | 04-03  | Graceful 3-tier fallback chain                | popup → v1 minibuffer → read-string for max compatibility  |
+| 2026-02-08 | 04-03  | Renamed headerArg to descriptionArg           | Semantic clarity - maps to v2 popup's description param    |
 | 2026-02-08 | 04-02  | Single newline between title and description  | User feedback - improves visual hierarchy and compactness  |
 | 2026-02-08 | 04-02  | Auto-load popup module in ask-user.el         | Simplifies setup, ensures popup always available           |
 | 2026-02-08 | 04-01  | Consolidated three tasks into single impl     | Visual layout/cancel are tightly coupled with core infra   |
@@ -93,7 +93,6 @@ Phase 6: [--------] 0/1
 - [x] Document testing workflow
 - [x] Refine spacing based on user feedback
 - [x] Wire MCP server to call v2 popup function
-- [x] Implement graceful fallback to v1 and read-string
 
 **Phase 5 (Next):**
 - [ ] Create overlay for selection highlighting
@@ -118,30 +117,27 @@ None currently.
 
 ### What Just Happened
 
-**2026-02-08 15:22-15:23:** Phase 4 Plan 1 executed and completed. Created `emacs/ask-user-popup.el` with core popup infrastructure: major mode, recursive-edit blocking, visual layout, cancel handling, and cleanup. All three planned tasks consolidated into single cohesive implementation (70 seconds total).
+**2026-02-08:** Phase 4 execution completed with all 3 plans:
+- **04-01:** Created emacs/ask-user-popup.el with core popup infrastructure
+- **04-02:** Integrated popup module loading, created test script, user verified visual layout
+- **04-03:** Wired MCP server to call v2 popup function with graceful fallback chain
 
-**2026-02-08 16:30-16:45:** Phase 4 Plan 2 executed and completed. Integrated popup module loading into ask-user.el, created emacsclient integration test (test-ask.sh), updated TESTING.md with integration docs. Human verification checkpoint resulted in spacing refinement (double to single newline between title and description). Phase 4 now complete.
-
-**2026-02-08 21:44-21:46:** Phase 4 Plan 3 executed and completed. Wired MCP server to call v2 popup function (mr-x/ask-user-popup) instead of v1 minibuffer function. Implemented graceful fallback chain: popup -> v1 minibuffer -> read-string. Renamed headerArg to descriptionArg for semantic clarity. End-to-end integration now complete. Phase 4 fully delivered (64 seconds execution).
+Phase verified as passed (8/8 must-haves). End-to-end flow now complete: MCP tool → server → emacsclient → mr-x/ask-user-popup → popup buffer → user response → Claude.
 
 ### For Next Session
 
-**Phase 5 execution:**
+**Phase 5 planning:**
 1. Read ROADMAP.md Phase 5 section for goals
-2. Execute Phase 5 plans for interaction modes
+2. Run `/gsd:plan-phase 5` to create execution plans
 3. Focus on options mode first (rendering + C-n/C-p navigation)
-4. Test with actual MCP tool call to verify v2 popup appears
-5. Use test-ask.sh as reference for integration patterns
+4. Test with emacsclient before integrating Node.js
 
 **If context lost:**
 1. Read this STATE.md for current position
 2. Read `.planning/phases/04-core-popup-infrastructure/04-03-SUMMARY.md` for latest delivery
 3. Load `emacs/ask-user-popup.el` and test `(mr-x/ask-user-popup "Test?" "Desc")` to verify infrastructure
-4. Run actual AskUserQuestion MCP tool to verify end-to-end flow
+4. Run `./test-ask.sh` to verify emacsclient integration
 5. Check ROADMAP.md for Phase 5 requirements
-
-**Phase 4 Achievement:**
-End-to-end integration complete. When Claude calls AskUserQuestion MCP tool, users now see popup buffer (if v2 loaded) instead of minibuffer prompt. Graceful degradation ensures compatibility with older versions.
 
 ---
 *Last updated: 2026-02-08*

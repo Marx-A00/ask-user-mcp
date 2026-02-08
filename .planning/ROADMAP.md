@@ -12,34 +12,36 @@ Each phase delivers a complete, verifiable capability that builds toward the fin
 
 ## Phases
 
-### Phase 4: Core Popup Infrastructure
+### Phase 4: Core Popup Infrastructure ✓
 
 **Goal:** Users see questions in a dedicated popup buffer at bottom of frame
 
 **Dependencies:** None (builds on v1 emacsclient integration)
+
+**Status:** Complete (2026-02-08)
 
 **Plans:** 3 plans
 
 Plans:
 - [x] 04-01-PLAN.md — Core buffer infrastructure (mode, display, blocking, cleanup)
 - [x] 04-02-PLAN.md — Integration verification and human approval
-- [ ] 04-03-PLAN.md — Gap closure: Wire MCP server to v2 popup function
+- [x] 04-03-PLAN.md — Gap closure: Wire MCP server to v2 popup function
 
 **Requirements:**
-- POPUP-01: Popup buffer appears at bottom of frame (~40% height)
-- POPUP-02: Buffer uses dedicated major mode (special-mode derived)
-- POPUP-03: Buffer blocks until user responds (recursive-edit pattern)
-- POPUP-04: Buffer cleanup on exit (no orphaned buffers)
-- POPUP-05: C-g cancels and returns error to Claude
-- VIS-01: Question/header displayed prominently at top
-- VIS-02: Description (if provided) displayed below header
-- VIS-03: Options or text area clearly separated from header
+- POPUP-01: Popup buffer appears at bottom of frame (~40% height) ✓
+- POPUP-02: Buffer uses dedicated major mode (special-mode derived) ✓
+- POPUP-03: Buffer blocks until user responds (recursive-edit pattern) ✓
+- POPUP-04: Buffer cleanup on exit (no orphaned buffers) ✓
+- POPUP-05: C-g cancels and returns error to Claude ✓
+- VIS-01: Question/header displayed prominently at top ✓
+- VIS-02: Description (if provided) displayed below header ✓
+- VIS-03: Options or text area clearly separated from header ✓
 
 **Success Criteria:**
-1. Popup appears at bottom of Emacs frame (~40% height) when Claude asks a question
-2. Question and description display clearly in read-only buffer
-3. C-g cancels and returns error to Claude
-4. Popup buffer cleans up automatically after response (no orphaned buffers)
+1. ✓ Popup appears at bottom of Emacs frame (~40% height) when Claude asks a question
+2. ✓ Question and description display clearly in read-only buffer
+3. ✓ C-g cancels and returns error to Claude
+4. ✓ Popup buffer cleans up automatically after response (no orphaned buffers)
 
 ### Phase 5: Selection and Free-Text Modes
 
@@ -85,11 +87,11 @@ Plans:
 
 | Phase | Status | Requirements | Completion |
 |-------|--------|--------------|------------|
-| Phase 4: Core Popup Infrastructure | In Progress | 8/21 | ~90% |
-| Phase 5: Selection and Free-Text Modes | Pending | 12/21 | 0% |
-| Phase 6: Enhanced Navigation | Pending | 1/21 | 0% |
+| Phase 4: Core Popup Infrastructure | ✓ Complete | 8/8 | 100% |
+| Phase 5: Selection and Free-Text Modes | Pending | 0/12 | 0% |
+| Phase 6: Enhanced Navigation | Pending | 0/1 | 0% |
 
-**Overall:** ~8/21 requirements complete (~38%)
+**Overall:** 8/21 requirements complete (38%)
 
 ---
 *Roadmap created: 2026-02-08*
