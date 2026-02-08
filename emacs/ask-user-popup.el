@@ -54,6 +54,43 @@
 (defvar-local ask-user-popup--focus nil
   "Current focus: 'options or 'text.")
 
+;;; Text editing functions
+
+(defun ask-user-popup--submit-text ()
+  "Submit text content from editable region and exit."
+  (interactive)
+  (if ask-user-popup--text-start
+      (let* ((text-content (buffer-substring-no-properties 
+                           ask-user-popup--text-start 
+                           ask-user-popup--text-end))
+             (trimmed (string-trim text-content)))
+        (if (and (string-empty-p trimmed) ask-user-popup--options)
+            ;; Empty text and options exist - confirm current option instead
+            (ask-user-popup--confirm-selection)
+          ;; Non-empty text or no options - return text
+          (setq ask-user-popup--result trimmed)
+          (exit-recursive-edit)))
+    ;; No text region - shouldn't happen, but fallback to cancel
+    (ask-user-popup-cancel)))
+
+(defun ask-user-popup--insert-newline ()
+  "Insert newline in text field."
+  (interactive)
+  (when (and ask-user-popup--text-start
+             (>= (point) ask-user-popup--text-start)
+             (<= (point) ask-user-popup--text-end))
+    (let ((inhibit-read-only t))
+      (insert "\n"))))
+
+(defun ask-user-popup--handle-return ()
+  "Handle RET key based on context.
+In text field: submit text.
+In options: confirm selection."
+  (interactive)
+  (if (eq ask-user-popup--focus 'text)
+      (ask-user-popup--submit-text)
+    (ask-user-popup--confirm-selection)))
+
 ;;; Focus management functions
 
 (defun ask-user-popup--focus-options ()
@@ -167,10 +204,15 @@
     (define-key map (kbd "<up>") 'ask-user-popup--select-prev)
     (define-key map (kbd "j") 'ask-user-popup--select-next)
     (define-key map (kbd "k") 'ask-user-popup--select-prev)
-    (define-key map (kbd "RET") 'ask-user-popup--confirm-selection)
+    (define-key map (kbd "RET") 'ask-user-popup--handle-return)
     (define-key map (kbd "<mouse-1>") 'ask-user-popup--select-option-at-point)
     ;; Tab for focus switching
     (define-key map (kbd "TAB") 'ask-user-popup--toggle-focus)
+    ;; Text editing keys (work when focus is text)
+    (define-key map (kbd "C-c C-c") 'ask-user-popup--submit-text)
+    (define-key map (kbd "C-j") 'ask-user-popup--insert-newline)
+    (define-key map (kbd "S-RET") 'ask-user-popup--insert-newline)
+    (define-key map (kbd "S-<return>") 'ask-user-popup--insert-newline)
     map)
   "Keymap for `ask-user-popup-mode'.")
 
@@ -179,7 +221,7 @@
 
 \\{ask-user-popup-mode-map}"
   (setq-local mode-line-format nil)
-  (setq-local cursor-type nil))
+  (setq-local cursor-type 'bar))
 
 ;;; Cancel function
 
@@ -199,7 +241,9 @@ DESCRIPTION is optional context displayed in muted text.
 OPTIONS is an optional list of strings for selection mode.
 
 When OPTIONS is provided, displays a numbered list and enables
-selection mode with C-n/C-p navigation.
+selection mode with C-n/C-p navigation. Text field is also available.
+
+When OPTIONS is nil, only displays text field for free-form input.
 
 This function blocks until the user responds or cancels.
 Returns the user's response string.
@@ -275,7 +319,10 @@ which causes emacsclient to exit with non-zero status."
                   (insert "\n"))
                 
                 ;; Label for text field
-                (insert (propertize "Or type a response:" 'face 'shadow))
+                (insert (propertize (if options 
+                                       "Or type a response:" 
+                                     "Type your response:")
+                                   'face 'shadow))
                 (insert "\n")
                 
                 ;; Create editable text region
@@ -288,14 +335,14 @@ which causes emacsclient to exit with non-zero status."
                 (setq ask-user-popup--text-end (point-marker))
                 (set-marker-insertion-type ask-user-popup--text-end t)
                 
-                ;; Make text region editable
-                (let ((inhibit-read-only t))
-                  (put-text-property ask-user-popup--text-start 
-                                   ask-user-popup--text-end 
-                                   'read-only nil)
-                  (put-text-property ask-user-popup--text-start 
-                                   ask-user-popup--text-end 
-                                   'rear-nonsticky t)))
+                ;; Make text region editable by removing read-only property
+                ;; We'll set buffer-read-only globally, but this region stays editable
+                (put-text-property ask-user-popup--text-start 
+                                 ask-user-popup--text-end 
+                                 'read-only nil)
+                (put-text-property ask-user-popup--text-start 
+                                 ask-user-popup--text-end 
+                                 'rear-nonsticky t))
               
               ;; Set initial focus
               (if options
@@ -303,8 +350,11 @@ which causes emacsclient to exit with non-zero status."
                 (setq ask-user-popup--focus 'text)
                 (goto-char ask-user-popup--text-start))
               
-              ;; Make buffer read-only (except text region)
+              ;; Make buffer read-only (except text region which has read-only nil)
               (setq buffer-read-only t)
+              
+              ;; Enable self-insert in text region
+              (add-hook 'post-command-hook 'ask-user-popup--maintain-text-region nil t)
               
               ;; Reset state variables
               (setq ask-user-popup--result nil)
@@ -335,6 +385,15 @@ which causes emacsclient to exit with non-zero status."
           (quit-window t (get-buffer-window buf)))
         (when (buffer-live-p buf)
           (kill-buffer buf))))))
+
+(defun ask-user-popup--maintain-text-region ()
+  "Maintain editable text region after commands."
+  (when (and ask-user-popup--text-start ask-user-popup--text-end)
+    ;; Ensure text region properties remain
+    (let ((inhibit-read-only t))
+      (put-text-property ask-user-popup--text-start 
+                        ask-user-popup--text-end 
+                        'read-only nil))))
 
 (provide 'ask-user-popup)
 
