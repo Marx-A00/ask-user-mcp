@@ -20,9 +20,9 @@ Replace minibuffer prompts with a proper popup buffer UI that feels native to Em
 ## Current Position
 
 **Phase:** 4 of 3 - Core Popup Infrastructure
-**Plan:** 1 of 1 complete
+**Plan:** 2 of 2 complete
 **Status:** Phase complete
-**Last activity:** 2026-02-08 - Completed 04-01-PLAN.md
+**Last activity:** 2026-02-08 - Completed 04-02-PLAN.md
 
 **Progress:**
 ```
@@ -51,7 +51,7 @@ Phase 6: [--------] 0/1
 - Requirements complete: 8/21 (38%)
 - Phases complete: 1/3
 - Current phase duration: <1 day
-- Phase 4 execution: 70 seconds
+- Phase 4 execution: 70 seconds + 15 minutes (integration + refinement)
 
 ### Historical (v1)
 
@@ -67,6 +67,8 @@ Phase 6: [--------] 0/1
 
 | Date       | Phase  | Decision                                      | Rationale                                                  |
 | ---------- | ------ | --------------------------------------------- | ---------------------------------------------------------- |
+| 2026-02-08 | 04-02  | Single newline between title and description  | User feedback - improves visual hierarchy and compactness  |
+| 2026-02-08 | 04-02  | Auto-load popup module in ask-user.el         | Simplifies setup, ensures popup always available           |
 | 2026-02-08 | 04-01  | Consolidated three tasks into single impl     | Visual layout/cancel are tightly coupled with core infra   |
 | 2026-02-08 | 04-01  | Use header-line-format for instructions       | Separates UI chrome from content, easier to customize      |
 | 2026-02-08 | 04-01  | Use quit-window with KILL for cleanup         | Atomic operation, handles edge cases automatically         |
@@ -84,6 +86,10 @@ Phase 6: [--------] 0/1
 - [x] Add cleanup with `unwind-protect`
 - [x] Visual layout with header line and styled content
 - [x] C-g/q cancel behavior with error signaling
+- [x] Load popup module in ask-user.el
+- [x] Create emacsclient integration test
+- [x] Document testing workflow
+- [x] Refine spacing based on user feedback
 
 **Phase 5 (Next):**
 - [ ] Create overlay for selection highlighting
@@ -110,6 +116,8 @@ None currently.
 
 **2026-02-08 15:22-15:23:** Phase 4 Plan 1 executed and completed. Created `emacs/ask-user-popup.el` with core popup infrastructure: major mode, recursive-edit blocking, visual layout, cancel handling, and cleanup. All three planned tasks consolidated into single cohesive implementation (70 seconds total).
 
+**2026-02-08 16:30-16:45:** Phase 4 Plan 2 executed and completed. Integrated popup module loading into ask-user.el, created emacsclient integration test (test-ask.sh), updated TESTING.md with integration docs. Human verification checkpoint resulted in spacing refinement (double to single newline between title and description). Phase 4 now complete.
+
 ### For Next Session
 
 **Phase 5 execution:**
@@ -117,12 +125,14 @@ None currently.
 2. Execute Phase 5 plans for interaction modes
 3. Focus on options mode first (rendering + C-n/C-p navigation)
 4. Test with emacsclient before integrating Node.js
+5. Use test-ask.sh as reference for integration patterns
 
 **If context lost:**
 1. Read this STATE.md for current position
-2. Read `.planning/phases/04-core-popup-infrastructure/04-01-SUMMARY.md` for what was delivered
+2. Read `.planning/phases/04-core-popup-infrastructure/04-02-SUMMARY.md` for latest delivery
 3. Load `emacs/ask-user-popup.el` and test `(mr-x/ask-user-popup "Test?" "Desc")` to verify infrastructure
-4. Check ROADMAP.md for Phase 5 requirements
+4. Run `./test-ask.sh` to verify emacsclient integration
+5. Check ROADMAP.md for Phase 5 requirements
 
 ---
 *Last updated: 2026-02-08*
