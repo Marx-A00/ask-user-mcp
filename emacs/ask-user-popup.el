@@ -12,6 +12,7 @@
 ;; - Visual layout with header line and styled content
 ;; - Cancel support (C-g, q)
 ;; - Selection mode with C-n/C-p navigation (Phase 5)
+;; - Free-text input mode with Tab switching (Phase 5)
 ;;
 ;; Usage:
 ;;   (mr-x/ask-user-popup "What is your name?" "Optional description")
@@ -44,6 +45,49 @@
 (defvar-local ask-user-popup--selection-overlay nil
   "Overlay used to highlight the currently selected option.")
 
+(defvar-local ask-user-popup--text-start nil
+  "Marker for start of editable text region.")
+
+(defvar-local ask-user-popup--text-end nil
+  "Marker for end of editable text region.")
+
+(defvar-local ask-user-popup--focus nil
+  "Current focus: 'options or 'text.")
+
+;;; Focus management functions
+
+(defun ask-user-popup--focus-options ()
+  "Move focus to options list."
+  (interactive)
+  (when ask-user-popup--options
+    (setq ask-user-popup--focus 'options)
+    ;; Move point to first option
+    (let ((first-option-pos (text-property-any (point-min) (point-max) 'option-index 0)))
+      (when first-option-pos
+        (goto-char first-option-pos)))
+    ;; Restore selection highlight
+    (when ask-user-popup--selection-overlay
+      (overlay-put ask-user-popup--selection-overlay 'face '(:inverse-video t)))
+    (ask-user-popup--move-selection-overlay)))
+
+(defun ask-user-popup--focus-text ()
+  "Move focus to text input field."
+  (interactive)
+  (when ask-user-popup--text-start
+    (setq ask-user-popup--focus 'text)
+    ;; Move point into text field
+    (goto-char ask-user-popup--text-start)
+    ;; Dim selection highlight if in options mode
+    (when (and ask-user-popup--selection-overlay ask-user-popup--options)
+      (overlay-put ask-user-popup--selection-overlay 'face '(:inverse-video t :foreground "gray50")))))
+
+(defun ask-user-popup--toggle-focus ()
+  "Toggle focus between options and text field."
+  (interactive)
+  (if (eq ask-user-popup--focus 'text)
+      (ask-user-popup--focus-options)
+    (ask-user-popup--focus-text)))
+
 ;;; Navigation functions
 
 (defun ask-user-popup--move-selection-overlay ()
@@ -60,22 +104,37 @@
             (move-overlay ask-user-popup--selection-overlay line-start line-end)))))))
 
 (defun ask-user-popup--select-next ()
-  "Move selection to next option (with wrap-around)."
+  "Move selection to next option (with wrap-around), or enter text field from last option."
   (interactive)
-  (when ask-user-popup--options
-    (setq ask-user-popup--selected-index 
-          (mod (1+ ask-user-popup--selected-index) 
-               (length ask-user-popup--options)))
-    (ask-user-popup--move-selection-overlay)))
+  (if (eq ask-user-popup--focus 'text)
+      ;; In text field, do nothing (or could wrap to first option)
+      nil
+    ;; In options
+    (when ask-user-popup--options
+      (let ((last-index (1- (length ask-user-popup--options))))
+        (if (= ask-user-popup--selected-index last-index)
+            ;; On last option, move to text field
+            (ask-user-popup--focus-text)
+          ;; Not on last option, move to next
+          (setq ask-user-popup--selected-index 
+                (mod (1+ ask-user-popup--selected-index) 
+                     (length ask-user-popup--options)))
+          (ask-user-popup--move-selection-overlay))))))
 
 (defun ask-user-popup--select-prev ()
-  "Move selection to previous option (with wrap-around)."
+  "Move selection to previous option (with wrap-around), or jump to last option from text field."
   (interactive)
-  (when ask-user-popup--options
-    (setq ask-user-popup--selected-index 
-          (mod (1- ask-user-popup--selected-index) 
-               (length ask-user-popup--options)))
-    (ask-user-popup--move-selection-overlay)))
+  (if (eq ask-user-popup--focus 'text)
+      ;; In text field, jump to last option
+      (when ask-user-popup--options
+        (setq ask-user-popup--selected-index (1- (length ask-user-popup--options)))
+        (ask-user-popup--focus-options))
+    ;; In options
+    (when ask-user-popup--options
+      (setq ask-user-popup--selected-index 
+            (mod (1- ask-user-popup--selected-index) 
+                 (length ask-user-popup--options)))
+      (ask-user-popup--move-selection-overlay))))
 
 (defun ask-user-popup--confirm-selection ()
   "Confirm the current selection and exit."
@@ -110,6 +169,8 @@
     (define-key map (kbd "k") 'ask-user-popup--select-prev)
     (define-key map (kbd "RET") 'ask-user-popup--confirm-selection)
     (define-key map (kbd "<mouse-1>") 'ask-user-popup--select-option-at-point)
+    ;; Tab for focus switching
+    (define-key map (kbd "TAB") 'ask-user-popup--toggle-focus)
     map)
   "Keymap for `ask-user-popup-mode'.")
 
@@ -174,43 +235,75 @@ which causes emacsclient to exit with non-zero status."
               (insert "\n\n")
               
               ;; Render options if provided
-              (if options
-                  (progn
-                    ;; Store options in buffer-local var
-                    (setq ask-user-popup--options options)
-                    (setq ask-user-popup--selected-index 0)
-                    
-                    ;; Render numbered option list
-                    (let ((idx 0)
-                          (option-start nil))
-                      (dolist (option options)
-                        (setq option-start (point))
-                        (insert (format "%d. %s\n" (1+ idx) option))
-                        ;; Add text property to mark this as an option line
-                        (put-text-property option-start (point) 'option-index idx)
-                        (setq idx (1+ idx))))
-                    
-                    ;; Add blank line after options
-                    (insert "\n")
-                    
-                    ;; Create selection overlay for first option
-                    (setq ask-user-popup--selection-overlay (make-overlay 1 1))
-                    (overlay-put ask-user-popup--selection-overlay 'face '(:inverse-video t))
-                    
-                    ;; Move overlay to first option
-                    (goto-char (point-min))
-                    (let ((first-option-pos (text-property-any (point-min) (point-max) 'option-index 0)))
-                      (when first-option-pos
-                        (goto-char first-option-pos)
-                        (let ((line-start (line-beginning-position))
-                              (line-end (1+ (line-end-position))))
-                          (move-overlay ask-user-popup--selection-overlay line-start line-end)))))
+              (when options
+                ;; Store options in buffer-local var
+                (setq ask-user-popup--options options)
+                (setq ask-user-popup--selected-index 0)
+                (setq ask-user-popup--focus 'options)
                 
-                ;; No options - placeholder for free-text mode (Task 4)
-                (insert (propertize "[Response area - free-text mode coming]" 'face 'italic))
-                (insert "\n"))
+                ;; Render numbered option list
+                (let ((idx 0)
+                      (option-start nil))
+                  (dolist (option options)
+                    (setq option-start (point))
+                    (insert (format "%d. %s\n" (1+ idx) option))
+                    ;; Add text property to mark this as an option line
+                    (put-text-property option-start (point) 'option-index idx)
+                    (setq idx (1+ idx))))
+                
+                ;; Add blank line after options
+                (insert "\n")
+                
+                ;; Create selection overlay for first option
+                (setq ask-user-popup--selection-overlay (make-overlay 1 1))
+                (overlay-put ask-user-popup--selection-overlay 'face '(:inverse-video t))
+                
+                ;; Move overlay to first option
+                (goto-char (point-min))
+                (let ((first-option-pos (text-property-any (point-min) (point-max) 'option-index 0)))
+                  (when first-option-pos
+                    (goto-char first-option-pos)
+                    (let ((line-start (line-beginning-position))
+                          (line-end (1+ (line-end-position))))
+                      (move-overlay ask-user-popup--selection-overlay line-start line-end)))))
               
-              ;; Make buffer read-only
+              ;; Add text input field (always present)
+              (let ((text-label-pos (point)))
+                ;; Visual separator if options exist
+                (when options
+                  (insert (propertize "────────────────────────────────────────" 'face 'shadow))
+                  (insert "\n"))
+                
+                ;; Label for text field
+                (insert (propertize "Or type a response:" 'face 'shadow))
+                (insert "\n")
+                
+                ;; Create editable text region
+                (setq ask-user-popup--text-start (point-marker))
+                (set-marker-insertion-type ask-user-popup--text-start nil)
+                
+                ;; Insert initial empty line for text input
+                (insert "\n")
+                
+                (setq ask-user-popup--text-end (point-marker))
+                (set-marker-insertion-type ask-user-popup--text-end t)
+                
+                ;; Make text region editable
+                (let ((inhibit-read-only t))
+                  (put-text-property ask-user-popup--text-start 
+                                   ask-user-popup--text-end 
+                                   'read-only nil)
+                  (put-text-property ask-user-popup--text-start 
+                                   ask-user-popup--text-end 
+                                   'rear-nonsticky t)))
+              
+              ;; Set initial focus
+              (if options
+                  (setq ask-user-popup--focus 'options)
+                (setq ask-user-popup--focus 'text)
+                (goto-char ask-user-popup--text-start))
+              
+              ;; Make buffer read-only (except text region)
               (setq buffer-read-only t)
               
               ;; Reset state variables
