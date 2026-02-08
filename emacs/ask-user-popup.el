@@ -44,6 +44,56 @@
 (defvar-local ask-user-popup--selection-overlay nil
   "Overlay used to highlight the currently selected option.")
 
+;;; Navigation functions
+
+(defun ask-user-popup--move-selection-overlay ()
+  "Move selection overlay to the currently selected option line."
+  (when (and ask-user-popup--selection-overlay ask-user-popup--options)
+    (let ((target-pos (text-property-any (point-min) (point-max) 
+                                         'option-index 
+                                         ask-user-popup--selected-index)))
+      (when target-pos
+        (save-excursion
+          (goto-char target-pos)
+          (let ((line-start (line-beginning-position))
+                (line-end (1+ (line-end-position))))
+            (move-overlay ask-user-popup--selection-overlay line-start line-end)))))))
+
+(defun ask-user-popup--select-next ()
+  "Move selection to next option (with wrap-around)."
+  (interactive)
+  (when ask-user-popup--options
+    (setq ask-user-popup--selected-index 
+          (mod (1+ ask-user-popup--selected-index) 
+               (length ask-user-popup--options)))
+    (ask-user-popup--move-selection-overlay)))
+
+(defun ask-user-popup--select-prev ()
+  "Move selection to previous option (with wrap-around)."
+  (interactive)
+  (when ask-user-popup--options
+    (setq ask-user-popup--selected-index 
+          (mod (1- ask-user-popup--selected-index) 
+               (length ask-user-popup--options)))
+    (ask-user-popup--move-selection-overlay)))
+
+(defun ask-user-popup--confirm-selection ()
+  "Confirm the current selection and exit."
+  (interactive)
+  (when ask-user-popup--options
+    (let ((selected-option (nth ask-user-popup--selected-index ask-user-popup--options)))
+      (setq ask-user-popup--result selected-option)
+      (exit-recursive-edit))))
+
+(defun ask-user-popup--select-option-at-point ()
+  "Select and confirm the option at point (for mouse support)."
+  (interactive)
+  (when ask-user-popup--options
+    (let ((idx (get-text-property (point) 'option-index)))
+      (when (and idx (>= idx 0) (< idx (length ask-user-popup--options)))
+        (setq ask-user-popup--selected-index idx)
+        (ask-user-popup--confirm-selection)))))
+
 ;;; Major mode
 
 (defvar ask-user-popup-mode-map
@@ -51,6 +101,15 @@
     (set-keymap-parent map special-mode-map)
     (define-key map (kbd "q") 'ask-user-popup-cancel)
     (define-key map (kbd "C-g") 'ask-user-popup-cancel)
+    ;; Navigation keys (work when options exist)
+    (define-key map (kbd "C-n") 'ask-user-popup--select-next)
+    (define-key map (kbd "C-p") 'ask-user-popup--select-prev)
+    (define-key map (kbd "<down>") 'ask-user-popup--select-next)
+    (define-key map (kbd "<up>") 'ask-user-popup--select-prev)
+    (define-key map (kbd "j") 'ask-user-popup--select-next)
+    (define-key map (kbd "k") 'ask-user-popup--select-prev)
+    (define-key map (kbd "RET") 'ask-user-popup--confirm-selection)
+    (define-key map (kbd "<mouse-1>") 'ask-user-popup--select-option-at-point)
     map)
   "Keymap for `ask-user-popup-mode'.")
 
