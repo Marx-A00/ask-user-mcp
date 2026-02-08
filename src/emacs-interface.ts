@@ -47,18 +47,25 @@ export async function askViaEmacs(
   qaLogger.debug('Q&A initiated');
 
   const escapedQuestion = escapeElispString(question);
-  const headerArg = options.header 
+  const descriptionArg = options.header 
     ? `"${escapeElispString(options.header)}"` 
     : "nil";
   
-  // Build elisp with condition-case for graceful fallback
-  // If mr-x/ask-user-question is not defined, falls back to read-string
+  // Build elisp with graceful fallback chain:
+  // 1. Try v2 popup (mr-x/ask-user-popup)
+  // 2. Fall back to v1 minibuffer (mr-x/ask-user-question)
+  // 3. Ultimate fallback to read-string
   const elispExpr = `(condition-case err
-    (mr-x/ask-user-question "${escapedQuestion}" ${headerArg})
+    (mr-x/ask-user-popup "${escapedQuestion}" ${descriptionArg})
   (void-function
-    (progn
-      (message "ask-user-mcp: mr-x/ask-user-question not defined, using read-string")
-      (read-string "Claude asks: ${escapedQuestion} "))))`;
+    (condition-case err2
+        (progn
+          (message "ask-user-mcp: popup not available, using v1 minibuffer")
+          (mr-x/ask-user-question "${escapedQuestion}" ${descriptionArg}))
+      (void-function
+        (progn
+          (message "ask-user-mcp: no ask-user functions defined, using read-string")
+          (read-string "Claude asks: ${escapedQuestion} "))))))`;
 
   const proc = spawn("emacsclient", ["--eval", elispExpr]);
   
