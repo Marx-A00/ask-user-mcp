@@ -49,6 +49,13 @@ Plans:
 
 **Dependencies:** Phase 4 (requires popup infrastructure)
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Selection mode: numbered options, C-n/C-p navigation, highlighting, RET confirm
+- [ ] 05-02-PLAN.md — Free-text mode: text field below options, Tab switching, multi-line, submission
+- [ ] 05-03-PLAN.md — Node.js integration: options parameter, escaping, fallback, end-to-end verification
+
 **Requirements:**
 - SEL-01: Tool accepts `options` array parameter for multiple choice
 - SEL-02: Options display as selectable list in popup
@@ -88,7 +95,7 @@ Plans:
 | Phase | Status | Requirements | Completion |
 |-------|--------|--------------|------------|
 | Phase 4: Core Popup Infrastructure | ✓ Complete | 8/8 | 100% |
-| Phase 5: Selection and Free-Text Modes | Pending | 0/12 | 0% |
+| Phase 5: Selection and Free-Text Modes | Planned | 0/12 | 0% |
 | Phase 6: Enhanced Navigation | Pending | 0/1 | 0% |
 
 **Overall:** 8/21 requirements complete (38%)
