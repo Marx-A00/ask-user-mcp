@@ -19,22 +19,23 @@ Replace minibuffer prompts with a proper popup buffer UI that feels native to Em
 
 ## Current Position
 
-**Phase:** 4 - Core Popup Infrastructure
-**Plan:** Not started
-**Status:** Pending
+**Phase:** 4 of 3 - Core Popup Infrastructure
+**Plan:** 1 of 1 complete
+**Status:** Phase complete
+**Last activity:** 2026-02-08 - Completed 04-01-PLAN.md
 
 **Progress:**
 ```
-[------------------------------] 0% (0/21 requirements)
-Phase 4: [--------] 0/8
+[████████████--------------] 38% (8/21 requirements)
+Phase 4: [████████] 8/8 ✓
 Phase 5: [--------] 0/12
 Phase 6: [--------] 0/1
 ```
 
 **Next Steps:**
-1. Run `/gsd:plan-phase 4` to decompose Phase 4 into executable plans
-2. Execute plans to implement core popup infrastructure
-3. Verify Phase 4 success criteria before moving to Phase 5
+1. Execute Phase 5 plans for interaction modes
+2. Integrate with Node.js server
+3. Test end-to-end flow with emacsclient
 
 ## Performance Metrics
 
@@ -47,9 +48,10 @@ Phase 6: [--------] 0/1
 
 **Actual:**
 - Start date: 2026-02-08
-- Requirements complete: 0/21 (0%)
-- Phases complete: 0/3
-- Current phase duration: 0 days
+- Requirements complete: 8/21 (38%)
+- Phases complete: 1/3
+- Current phase duration: <1 day
+- Phase 4 execution: 70 seconds
 
 ### Historical (v1)
 
@@ -63,32 +65,33 @@ Phase 6: [--------] 0/1
 
 ### Decisions
 
-**2026-02-08 (v2 Start):**
-- Research completed: Use native Emacs primitives (recursive-edit, overlays, display-buffer-at-bottom) instead of completion frameworks
-- Phase structure: 4 (infrastructure), 5 (modes + integration), 6 (polish)
-- Critical path: Phase 4 → Phase 5 → Phase 6 (sequential dependencies)
-
-**2025-02-02 (v1 Complete):**
-- v1 shipped with minibuffer-based prompts using emacsclient integration
-- Structured logging via Pino, error classification, timeout handling all working
-- Documentation complete (README, Emacs config, troubleshooting guide)
+| Date       | Phase  | Decision                                      | Rationale                                                  |
+| ---------- | ------ | --------------------------------------------- | ---------------------------------------------------------- |
+| 2026-02-08 | 04-01  | Consolidated three tasks into single impl     | Visual layout/cancel are tightly coupled with core infra   |
+| 2026-02-08 | 04-01  | Use header-line-format for instructions       | Separates UI chrome from content, easier to customize      |
+| 2026-02-08 | 04-01  | Use quit-window with KILL for cleanup         | Atomic operation, handles edge cases automatically         |
+| 2026-02-08 | 04-01  | Buffer-local vars for state                   | State persists even if popup function interrupted          |
+| 2026-02-08 | v2     | Use native Emacs primitives                   | Research showed recursive-edit + overlays + display-buffer |
+| 2026-02-08 | v2     | Phase structure: 4 (infra), 5 (modes), 6 (UX) | Sequential dependencies for clean architecture             |
 
 ### Todos
 
-**Phase 4 (Pending):**
-- [ ] Implement major mode derived from `special-mode`
-- [ ] Create popup display function with `display-buffer-at-bottom`
-- [ ] Integrate `recursive-edit` for blocking behavior
-- [ ] Implement buffer-local result storage
-- [ ] Add cleanup with `unwind-protect`
-- [ ] Test emacsclient blocking and return values
+**Phase 4 (Complete):**
+- [x] Implement major mode derived from `special-mode`
+- [x] Create popup display function with `display-buffer-at-bottom`
+- [x] Integrate `recursive-edit` for blocking behavior
+- [x] Implement buffer-local result storage
+- [x] Add cleanup with `unwind-protect`
+- [x] Visual layout with header line and styled content
+- [x] C-g/q cancel behavior with error signaling
 
-**Phase 5 (Pending):**
+**Phase 5 (Next):**
 - [ ] Create overlay for selection highlighting
 - [ ] Implement C-n/C-p keybindings
 - [ ] Add mode-switching logic (options vs free-text)
 - [ ] Update Node.js to pass options array
 - [ ] Test timeout behavior with popup
+- [ ] End-to-end integration test
 
 **Phase 6 (Pending):**
 - [ ] Add 1-9 keybindings for instant selection
@@ -105,20 +108,21 @@ None currently.
 
 ### What Just Happened
 
-**2026-02-08 15:30:** Roadmap created for v2 milestone. Phase structure derived from requirements and research: Phase 4 (core infrastructure), Phase 5 (modes + integration), Phase 6 (enhanced navigation). All 21 v2 requirements mapped with 100% coverage.
+**2026-02-08 15:22-15:23:** Phase 4 Plan 1 executed and completed. Created `emacs/ask-user-popup.el` with core popup infrastructure: major mode, recursive-edit blocking, visual layout, cancel handling, and cleanup. All three planned tasks consolidated into single cohesive implementation (70 seconds total).
 
 ### For Next Session
 
-**If continuing Phase 4:**
-1. Read ROADMAP.md Phase 4 section for goals and success criteria
-2. Run `/gsd:plan-phase 4` to create executable plans
-3. Focus on recursive-edit blocking pattern and cleanup first (critical for integration)
+**Phase 5 execution:**
+1. Read ROADMAP.md Phase 5 section for goals
+2. Execute Phase 5 plans for interaction modes
+3. Focus on options mode first (rendering + C-n/C-p navigation)
+4. Test with emacsclient before integrating Node.js
 
 **If context lost:**
 1. Read this STATE.md for current position
-2. Read ROADMAP.md for phase structure
-3. Read research/SUMMARY.md for technical approach
-4. Check REQUIREMENTS.md traceability for what's mapped where
+2. Read `.planning/phases/04-core-popup-infrastructure/04-01-SUMMARY.md` for what was delivered
+3. Load `emacs/ask-user-popup.el` and test `(mr-x/ask-user-popup "Test?" "Desc")` to verify infrastructure
+4. Check ROADMAP.md for Phase 5 requirements
 
 ---
 *Last updated: 2026-02-08*
