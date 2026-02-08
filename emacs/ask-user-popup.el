@@ -11,9 +11,11 @@
 ;; - Buffer lifecycle management with proper cleanup
 ;; - Visual layout with header line and styled content
 ;; - Cancel support (C-g, q)
+;; - Selection mode with C-n/C-p navigation (Phase 5)
 ;;
 ;; Usage:
 ;;   (mr-x/ask-user-popup "What is your name?" "Optional description")
+;;   (mr-x/ask-user-popup "Choose color" "Pick one" '("Red" "Green" "Blue"))
 ;;
 ;; Emacsclient Integration (MCP Server):
 ;; This function is designed to be called via emacsclient from the Node.js server:
@@ -32,6 +34,15 @@
 
 (defvar-local ask-user-popup--cancelled nil
   "Non-nil if the popup was cancelled by the user.")
+
+(defvar-local ask-user-popup--options nil
+  "List of option strings for selection mode.")
+
+(defvar-local ask-user-popup--selected-index 0
+  "Currently selected option index (0-based).")
+
+(defvar-local ask-user-popup--selection-overlay nil
+  "Overlay used to highlight the currently selected option.")
 
 ;;; Major mode
 
@@ -62,9 +73,13 @@
 
 ;;; Main popup function
 
-(defun mr-x/ask-user-popup (question &optional description)
+(defun mr-x/ask-user-popup (question &optional description options)
   "Display QUESTION in a popup buffer at bottom of frame.
 DESCRIPTION is optional context displayed in muted text.
+OPTIONS is an optional list of strings for selection mode.
+
+When OPTIONS is provided, displays a numbered list and enables
+selection mode with C-n/C-p navigation.
 
 This function blocks until the user responds or cancels.
 Returns the user's response string.
@@ -99,9 +114,42 @@ which causes emacsclient to exit with non-zero status."
               (insert (propertize "────────────────────────────────────────" 'face 'shadow))
               (insert "\n\n")
               
-              ;; Placeholder for Phase 5 content
-              (insert (propertize "[Response area - Phase 5]" 'face 'italic))
-              (insert "\n")
+              ;; Render options if provided
+              (if options
+                  (progn
+                    ;; Store options in buffer-local var
+                    (setq ask-user-popup--options options)
+                    (setq ask-user-popup--selected-index 0)
+                    
+                    ;; Render numbered option list
+                    (let ((idx 0)
+                          (option-start nil))
+                      (dolist (option options)
+                        (setq option-start (point))
+                        (insert (format "%d. %s\n" (1+ idx) option))
+                        ;; Add text property to mark this as an option line
+                        (put-text-property option-start (point) 'option-index idx)
+                        (setq idx (1+ idx))))
+                    
+                    ;; Add blank line after options
+                    (insert "\n")
+                    
+                    ;; Create selection overlay for first option
+                    (setq ask-user-popup--selection-overlay (make-overlay 1 1))
+                    (overlay-put ask-user-popup--selection-overlay 'face '(:inverse-video t))
+                    
+                    ;; Move overlay to first option
+                    (goto-char (point-min))
+                    (let ((first-option-pos (text-property-any (point-min) (point-max) 'option-index 0)))
+                      (when first-option-pos
+                        (goto-char first-option-pos)
+                        (let ((line-start (line-beginning-position))
+                              (line-end (1+ (line-end-position))))
+                          (move-overlay ask-user-popup--selection-overlay line-start line-end)))))
+                
+                ;; No options - placeholder for free-text mode (Task 4)
+                (insert (propertize "[Response area - free-text mode coming]" 'face 'italic))
+                (insert "\n"))
               
               ;; Make buffer read-only
               (setq buffer-read-only t)
