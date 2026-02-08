@@ -23,6 +23,10 @@ server.registerTool(
         .max(30 * 60000, "Timeout cannot exceed 30 minutes")
         .optional()
         .describe("Timeout in milliseconds (default: 300000 = 5 minutes)"),
+      options: z
+        .array(z.string())
+        .optional()
+        .describe("Optional list of choices for the user to select from"),
     },
   },
   async (args) => {
@@ -30,6 +34,7 @@ server.registerTool(
       const response = await askViaEmacs(args.question, {
         header: args.header,
         timeout_ms: args.timeout_ms,
+        options: args.options,
       });
       return {
         content: [

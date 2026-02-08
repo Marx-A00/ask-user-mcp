@@ -11,12 +11,18 @@ export function getActiveProcesses(): Set<ChildProcess> {
 export interface AskOptions {
   header?: string;
   timeout_ms?: number;
+  options?: string[];
 }
 
 function escapeElispString(str: string): string {
   return str
     .replace(/\\/g, "\\\\")
     .replace(/"/g, '\\"');
+}
+
+function formatElispList(items: string[]): string {
+  const escaped = items.map(s => `"${escapeElispString(s)}"`).join(' ');
+  return `(list ${escaped})`;
 }
 
 export async function askViaEmacs(
@@ -42,6 +48,7 @@ export async function askViaEmacs(
     question: question.slice(0, 100), // truncate for logs
     header: options.header,
     timeout_ms: timeout,
+    hasOptions: !!options.options?.length,
   });
 
   qaLogger.debug('Q&A initiated');
@@ -51,12 +58,18 @@ export async function askViaEmacs(
     ? `"${escapeElispString(options.header)}"` 
     : "nil";
   
+  // Format options as elisp list, or nil if not provided
+  const optionsArg = options.options?.length
+    ? formatElispList(options.options)
+    : "nil";
+  
   // Build elisp with graceful fallback chain:
-  // 1. Try v2 popup (mr-x/ask-user-popup)
-  // 2. Fall back to v1 minibuffer (mr-x/ask-user-question)
-  // 3. Ultimate fallback to read-string
+  // 1. Try v2 popup (mr-x/ask-user-popup) - supports options
+  // 2. Fall back to v1 minibuffer (mr-x/ask-user-question) - ignores options (expected degradation)
+  // 3. Ultimate fallback to read-string - ignores options (expected degradation)
+  // Note: v1 and read-string don't support options parameter, they will simply prompt for text
   const elispExpr = `(condition-case err
-    (mr-x/ask-user-popup "${escapedQuestion}" ${descriptionArg})
+    (mr-x/ask-user-popup "${escapedQuestion}" ${descriptionArg} ${optionsArg})
   (void-function
     (condition-case err2
         (progn
