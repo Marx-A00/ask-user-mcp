@@ -29,6 +29,11 @@ The prompt is styled with bold 'Claude asks:' prefix for visibility."
   "Legacy alias for `mr-x/ask-user-question'.
 Kept for backwards compatibility with older server versions.")
 
+;; Load popup UI module (v2)
+;; ask-user-popup.el provides the new popup-based interface that appears
+;; at the bottom of the frame (popper-style) instead of using the minibuffer.
+(require 'ask-user-popup nil t)  ; noerror if not found
+
 (provide 'ask-user)
 
 ;;; ask-user.el ends here
