@@ -88,7 +88,7 @@ which causes emacsclient to exit with non-zero status."
               
               ;; Insert question (bold, larger)
               (insert (propertize question 'face '(:weight bold :height 1.2)))
-              (insert "\n\n")
+              (insert "\n")
               
               ;; Insert description if provided (muted)
               (when description
