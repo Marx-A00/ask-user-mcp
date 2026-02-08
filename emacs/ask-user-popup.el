@@ -14,6 +14,12 @@
 ;;
 ;; Usage:
 ;;   (mr-x/ask-user-popup "What is your name?" "Optional description")
+;;
+;; Emacsclient Integration (MCP Server):
+;; This function is designed to be called via emacsclient from the Node.js server:
+;;   emacsclient --eval '(mr-x/ask-user-popup "question" "description")'
+;; It blocks until the user responds, then returns the response string.
+;; Cancel (C-g/q) signals an error, causing non-zero exit code from emacsclient.
 
 ;;; Code:
 
@@ -62,7 +68,12 @@ DESCRIPTION is optional context displayed in muted text.
 
 This function blocks until the user responds or cancels.
 Returns the user's response string.
-Signals an error if cancelled."
+Signals an error if cancelled.
+
+Emacsclient integration:
+When called via emacsclient, this function blocks the calling process
+until the user responds. Cancel operations (C-g/q) signal an error,
+which causes emacsclient to exit with non-zero status."
   (let* ((buf (get-buffer-create "*ask-user*"))
          (win nil))
     (unwind-protect
