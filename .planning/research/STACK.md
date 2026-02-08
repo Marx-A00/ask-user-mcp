@@ -1,579 +1,444 @@
-# Technology Stack - Ask User MCP Server
+# Technology Stack: Popup Buffer UI
 
-**Project:** ask-user-mcp  
-**Domain:** MCP server for interactive user prompts via Emacs  
-**Researched:** 2026-01-26  
-**Overall Confidence:** HIGH
+**Project:** AskUserQuestion MCP Server v2
+**Researched:** 2026-02-08
+**Confidence:** HIGH
 
 ## Executive Summary
 
-The standard 2025 stack for building MCP servers centers on the official TypeScript SDK with modern tooling for zero-config development. This document provides prescriptive recommendations with specific versions verified against current documentation.
+Build a custom popup buffer with overlays for selection highlighting. Use `display-buffer-at-bottom` with 0.4 height ratio for popper-style positioning. Do NOT use ivy/helm/vertico frameworks — they're built for minibuffer completion, not custom selection UIs. Build on top of Emacs's primitive display and overlay systems directly.
 
-## Core Framework & SDK
+## Recommended Approach: Custom Popup Buffer
 
-### MCP SDK
+### Why Custom Over Framework
 
-| Technology | Version | Purpose | Rationale |
-|------------|---------|---------|-----------|
-| `@modelcontextprotocol/sdk` | `^1.25.2` | Official MCP implementation | The official TypeScript SDK maintained by Anthropic. Version 1.x is stable and recommended for production. v2 is in pre-alpha (anticipated Q1 2026). Implements full MCP spec 2025-11-25. |
-| `zod` | `^3.25.0` | Schema validation (peer dependency) | Required peer dependency for SDK. SDK imports from zod/v4 internally but maintains backward compatibility with v3.25+. Essential for tool parameter validation. |
+**Vertico/Helm/Ivy are wrong tools:**
+- Designed for minibuffer completion workflows
+- Rely on `completing-read` which requires minibuffer
+- Cannot easily be adapted to custom popup buffers
+- Add unnecessary dependency weight
 
-**Confidence:** HIGH  
-**Source:** [Official npm package](https://www.npmjs.com/package/@modelcontextprotocol/sdk), [GitHub TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
+**Custom buffer is simpler:**
+- Direct control over display and keybindings
+- ~50 lines of elisp for full feature set
+- Reuses Emacs primitives (overlays, display-buffer)
+- Matches existing `read-string` integration pattern
 
-**Why this SDK:**
-- Official implementation by MCP protocol creators
-- Active maintenance with regular updates
-- Full spec compliance
-- Comprehensive documentation in docs/server.md
-- 21,227+ projects using it in production
+## Core Technologies
 
-**Version notes:**
-- Use v1.x for production (currently 1.25.2)
-- v1.x will receive bug fixes and security updates for at least 6 months after v2 ships
-- Do NOT use main branch (v2 pre-alpha) for production
+### 1. Buffer Display: `display-buffer-at-bottom`
 
-### Runtime Environment
+**What:** Native Emacs function for displaying buffers at frame bottom
+**Version:** Built-in since Emacs 24.1+
+**Purpose:** Position popup buffer at bottom with 40% height
 
-| Technology | Version | Purpose | Rationale |
-|------------|---------|---------|-----------|
-| Node.js | `24.x LTS (Krypton)` | JavaScript runtime | Current LTS with native `globalThis.crypto` support (required for SDK OAuth). LTS support until April 2028. Alternative: Node.js 22.x LTS (support until April 2027). Minimum: Node.js v19+ for Web Crypto API. |
-| TypeScript | `^5.7.0` | Type safety | Latest stable version with modern type inference and performance improvements. Excellent LSP support for development. |
-
-**Confidence:** HIGH  
-**Source:** [Node.js LTS releases](https://nodejs.org/en/about/previous-releases), [endoflife.date](https://endoflife.date/nodejs), [MCP SDK FAQ](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/docs/faq.md)
-
-**Why Node.js 24 LTS:**
-- Native Web Crypto API (required by SDK for OAuth)
-- Long-term support through April 2028
-- No need for `--experimental-global-webcrypto` flag
-- Battle-tested in production
-
-**Node.js v18 caveat:**
-- If targeting v18, requires `--experimental-global-webcrypto` flag or polyfill
-- SDK FAQ documents polyfill approach for older runtimes
-- Not recommended for new projects
-
-### Transport Layer
-
-| Technology | Purpose | When to Use |
-|------------|---------|-------------|
-| stdio transport (built-in SDK) | Local process communication | **USE THIS** - Local MCP servers (recommended for Claude Desktop, Emacs integrations). Zero network overhead, microsecond latency, no CORS issues. |
-| Streamable HTTP transport (built-in SDK) | Remote server communication | Remote/cloud deployments, enterprise-wide servers, horizontal scaling requirements. Standard as of March 2025. |
-
-**Confidence:** HIGH  
-**Source:** [MCP Transports Specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports), [Transport comparison guide](https://mcpcat.io/guides/comparing-stdio-sse-streamablehttp/)
-
-**Why stdio for this project:**
-- Emacs integration is inherently local
-- No network stack overhead
-- Simpler security model (no authentication needed)
-- Standard for local MCP servers
-- Client spawns server as child process
-
-**What NOT to use:**
-- SSE (Server-Sent Events) - Legacy transport, deprecated. Use Streamable HTTP instead if remote needed.
-- HTTP+SSE - Replaced by Streamable HTTP in March 2025
-
-## TypeScript Configuration
-
-### Compiler Settings (tsconfig.json)
-
-**Recommended configuration for Node.js 24 LTS + ESM:**
-
-```json
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "esModuleInterop": true,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
-}
+**Usage:**
+```elisp
+(display-buffer buffer-name
+  '(display-buffer-at-bottom
+    (window-height . 0.4)))
 ```
 
-**Confidence:** HIGH  
-**Source:** [Modern Node.js TypeScript setup 2025](https://dev.to/woovi/a-modern-nodejs-typescript-setup-for-2025-nlk), [tsconfig best practices](https://notes.shiv.info/javascript/2025/04/21/tsconfig-best-practices/)
+**Why this over alternatives:**
+- `display-buffer-at-bottom` is the standard way to show bottom buffers
+- `window-height . 0.4` sets height as 40% of frame (matches popper behavior)
+- No external packages needed
+- Works with all Emacs versions user likely has
 
-**Rationale:**
-- `NodeNext` module system: Native ESM support, aligns with modern Node.js
-- `strict: true`: Catches subtle bugs, enforces type safety
-- `skipLibCheck: true`: Avoid checking node_modules types (performance)
-- `forceConsistentCasingInFileNames: true`: Prevent cross-platform issues
+**Alternatives considered:**
+- `popper.el` package — Overkill, adds dependency for classification logic we don't need
+- `popwin.el` package — Deprecated/orphaned (emacsorphanage)
+- Side windows — More complex, designed for persistent windows
 
-**Alternative for CommonJS projects:**
-- `"module": "CommonJS"` if you must use CJS
-- Not recommended for new projects in 2025
+### 2. Selection Highlighting: Overlays
 
-### TypeScript Execution
+**What:** Emacs primitives for text highlighting
+**Version:** Built-in core feature
+**Purpose:** Highlight currently selected option
 
-| Tool | Version | Purpose | Rationale |
-|------|---------|---------|-----------|
-| `tsx` | `^4.23.0` | TypeScript execution for development | **RECOMMENDED** - Zero-config, 10x faster than ts-node, built on esbuild, native ESM support, includes watch mode. Official MCP examples use tsx. |
+**Key functions:**
+```elisp
+;; Create overlay
+(setq overlay (make-overlay start end))
 
-**Confidence:** HIGH  
-**Source:** [tsx vs ts-node comparison](https://betterstack.com/community/guides/scaling-nodejs/tsx-vs-ts-node/), [TypeScript runtime comparison](https://github.com/privatenumber/ts-runtime-comparison)
+;; Style it
+(overlay-put overlay 'face '(:background "#3a3f5a" :foreground "#ffffff"))
 
-**Why tsx over ts-node:**
-- 2-10x faster execution (esbuild vs TypeScript compiler)
-- Zero configuration required
-- Native ESM and modern JS features
-- Watch mode built-in
-- Official MCP SDK examples use tsx
-- Modern IDEs provide type checking anyway (runtime type checking less critical)
+;; Move it
+(move-overlay overlay new-start new-end)
 
-**When to use ts-node instead:**
-- Legacy projects already using ts-node
-- Require runtime type checking
-- Very large monorepos (some report ts-node faster at scale)
-
-**What NOT to use:**
-- `esno` - Just a wrapper around tsx, use tsx directly
-- `bun` - Alternative runtime, not standard Node.js (adds deployment complexity)
-
-## Package Management
-
-| Tool | Version | Purpose | Rationale |
-|------|---------|---------|-----------|
-| `pnpm` | `^9.0.0` | Package manager | **RECOMMENDED** - 70% less disk space than npm/Yarn, fastest installs, strict dependency management prevents bugs. Official MCP SDK repo uses pnpm for monorepo. |
-
-**Confidence:** MEDIUM  
-**Source:** [pnpm vs npm vs yarn 2025](https://dev.to/hamzakhan/npm-vs-yarn-vs-pnpm-which-package-manager-should-you-use-in-2025-2f1g), [pnpm benchmarks](https://pnpm.io/benchmarks)
-
-**Why pnpm:**
-- Content-addressable storage: Hard links instead of duplicates
-- 70% less disk space than npm/Yarn
-- Faster than npm and Yarn in benchmarks
-- Strict mode fails on incorrect package.json (catches bugs early)
-- Excellent monorepo support
-- Official MCP SDK uses pnpm
-
-**Alternatives:**
-- **npm** (bundled with Node.js) - Use if you want zero extra installs, acceptable performance for small projects
-- **Yarn** - Use if existing project already uses it, not recommended for greenfield 2025
-
-**Installation:**
-```bash
-npm install -g pnpm
+;; Clean up
+(delete-overlay overlay)
 ```
 
-## Code Quality Tools
+**Why overlays over text properties:**
+- Overlays don't affect buffer text (read-only safe)
+- Easy to move for C-n/C-p navigation
+- Can be deleted on exit without modifying buffer
+- Higher priority than font-lock (won't be overridden)
 
-### Linting & Formatting
+**Implementation pattern (from hl-line-mode):**
+- Create overlay once
+- Move it via `post-command-hook` after each C-n/C-p
+- Delete overlay when buffer closes
 
-| Tool | Version | Purpose | Rationale |
-|------|---------|---------|-----------|
-| `eslint` | `^9.18.0` | Linting | Modern flat config (eslint.config.js), industry standard for JavaScript/TypeScript. |
-| `@typescript-eslint/eslint-plugin` | `^8.20.0` | TypeScript rules | TypeScript-specific linting rules. |
-| `@typescript-eslint/parser` | `^8.20.0` | TypeScript parser | Parses TypeScript for ESLint. |
-| `prettier` | `^3.4.2` | Code formatting | Opinionated formatter, prevents bikeshedding on style. |
-| `eslint-config-prettier` | `^10.0.1` | ESLint/Prettier integration | Disables ESLint formatting rules that conflict with Prettier. |
-| `eslint-plugin-prettier` | `^5.2.2` | Run Prettier via ESLint | Exposes Prettier errors through ESLint. |
+### 3. Navigation: Custom Keymap with `set-transient-map`
 
-**Confidence:** HIGH  
-**Source:** [ESLint flat config guide 2025](https://advancedfrontends.com/eslint-flat-config-typescript-javascript/), [TypeScript ESLint setup](https://medium.com/@gabrieldrouin/node-js-2025-guide-how-to-setup-express-js-with-typescript-eslint-and-prettier-b342cd21c30d)
+**What:** Emacs function for temporary keybindings
+**Version:** Built-in since Emacs 24.4
+**Purpose:** C-n/C-p navigation active only in popup
 
-**Modern ESLint flat config (eslint.config.js):**
-```javascript
-import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
-import prettierRecommended from 'eslint-plugin-prettier/recommended';
+**Usage:**
+```elisp
+(let ((map (make-sparse-keymap)))
+  (define-key map (kbd "C-n") 'my-next-option)
+  (define-key map (kbd "C-p") 'my-previous-option)
+  (define-key map (kbd "RET") 'my-select-option)
+  (define-key map (kbd "C-g") 'my-cancel)
+  (set-transient-map map t))
+```
 
-export default tseslint.config(
-  {
-    ignores: ['dist/', 'node_modules/', '**/*.d.ts'],
-  },
-  prettierRecommended,
-  eslint.configs.recommended,
-  {
-    files: ['**/*.ts'],
-    extends: [tseslint.configs.recommended],
-    plugins: { '@typescript-eslint': tseslint.plugin },
-    languageOptions: {
-      parser: tseslint.parser,
-    },
-  }
+**Why this over buffer-local keymap:**
+- Temporary — automatically deactivates after selection
+- Takes precedence over other keymaps
+- Can optionally stay active with keep-pred parameter
+- Simpler than full major-mode
+
+**Alternative:** Use `read-event` loop for single-key selection (like `read-multiple-choice`)
+- Good for 1-9 key selection
+- Not good for C-n/C-p multi-line navigation
+
+### 4. Buffer Structure: Special Buffer with `with-current-buffer`
+
+**What:** Temporary buffer for UI
+**Version:** Built-in core
+**Purpose:** Contain formatted options and handle state
+
+**Pattern:**
+```elisp
+(defun my-popup-select (prompt options)
+  (let ((buffer (generate-new-buffer "*Claude Question*")))
+    (with-current-buffer buffer
+      (insert (propertize prompt 'face 'bold) "\n\n")
+      (dolist (option options)
+        (insert option "\n"))
+      (setq buffer-read-only t)
+      (goto-char (point-min))
+      (forward-line 2))  ; First option
+    (display-buffer buffer '(display-buffer-at-bottom (window-height . 0.4)))
+    (select-window (get-buffer-window buffer))
+    ;; ... navigation loop ...
+    (kill-buffer buffer)))
+```
+
+**Why special buffer:**
+- Clean state (no interference with user buffers)
+- Easy cleanup (kill-buffer removes it)
+- Can be read-only to prevent accidental editing
+- Name like "*Claude Question*" clearly indicates purpose
+
+## Integration with Existing v1 Code
+
+### Current State (v1)
+
+**TypeScript side:** `emacs-interface.ts`
+```typescript
+const result = execSync(
+  `emacsclient --eval '(mr-x/ask-user-question "${escaped}" ${headerArg})'`,
+  { encoding: 'utf-8', timeout }
 );
 ```
 
-**Prettier config (prettier.config.js):**
-```javascript
-export default {
-  semi: true,
-  trailingComma: 'all',
-  singleQuote: true,
-  printWidth: 100,
-  tabWidth: 2,
-  endOfLine: 'auto',
-};
+**Emacs side:** `ask-user.el`
+```elisp
+(defun mr-x/ask-user-question (question &optional header timeout-ms)
+  (read-string (concat prefix question-styled " ")))
 ```
 
-**Why these versions:**
-- ESLint 9.x introduced flat config (modern, simpler than legacy extends chains)
-- typescript-eslint 8.x supports latest TypeScript features
-- Prettier 3.x is current stable
-- Flat config eliminates legacy complexity
+### v2 Changes
 
-## Testing Framework
-
-| Tool | Version | Purpose | Rationale |
-|------|---------|---------|-----------|
-| `vitest` | `^3.0.0` | Unit/integration testing | **RECOMMENDED** - 10-20x faster than Jest, zero-config TypeScript support, native ESM, compatible with 95% of Jest API. Fastest-growing test framework (400% adoption increase 2023-2024). |
-
-**Confidence:** HIGH  
-**Source:** [Vitest vs Jest 2025](https://medium.com/@ruverd/jest-vs-vitest-which-test-runner-should-you-use-in-2025-5c85e4f2bda9), [Vitest comparison guide](https://vitest.dev/guide/comparisons)
-
-**Why Vitest over Jest:**
-- 10-20x faster test execution (especially in watch mode)
-- Zero-config TypeScript, ESM, JSX support
-- Drop-in replacement for Jest (95% API compatible)
-- Native ESM - no Babel/transform configuration needed
-- Modern developer experience
-- Released Vitest 3 in January 2025 with new features
-
-**When to use Jest instead:**
-- React Native projects (Jest mandatory)
-- Large legacy codebase already using Jest
-- Stability over speed priority
-
-**Testing MCP servers:**
-- Official MCP Inspector for protocol validation
-- Vitest for unit/integration tests of tool logic
-- In-memory client-server binding for fast tests (no subprocess overhead)
-
-**MCP-specific testing:**
-- Use `@modelcontextprotocol/inspector` for visual testing/debugging
-- Test tool schemas, parameter validation, and execution
-- Measure tool "hit rate" (correct tool calls) and success rate
-
-**Confidence on MCP testing:** MEDIUM  
-**Source:** [MCP testing best practices](https://www.merge.dev/blog/mcp-server-testing), [MCP Inspector](https://github.com/modelcontextprotocol/inspector)
-
-## Logging
-
-| Tool | Version | Purpose | Rationale |
-|------|---------|---------|-----------|
-| `pino` | `^9.0.0` | Structured logging | **RECOMMENDED** - Fastest Node.js logger (5-10x faster than Winston), JSON-structured logs, minimal CPU overhead, good defaults. |
-
-**Confidence:** MEDIUM  
-**Source:** [Pino vs Winston 2025](https://betterstack.com/community/comparisons/pino-vs-winston/), [Node.js logging guide](https://last9.io/blog/node-js-logging-libraries/)
-
-**Why Pino:**
-- 5-10x faster than Winston (async logging, optimized serialization)
-- JSON-structured by default (machine-readable)
-- Minimal performance impact (critical for stdio transport low latency)
-- Zero-config, good defaults
-- Strong ecosystem (transports available via separate packages)
-
-**Alternative - Winston:**
-- Use if you need multiple transports built-in
-- More customization flexibility
-- Human-readable logs by default
-- 12M+ weekly downloads (most popular)
-- Trade-off: Slower, more memory, requires configuration
-
-**For this project (ask-user-mcp):**
-- Pino recommended due to stdio transport's low-latency requirement
-- JSON logs integrate well with MCP Inspector
-- Simple use case doesn't need Winston's complexity
-
-## Emacs Integration
-
-### Process Spawning
-
-| Technology | Module | Purpose | Rationale |
-|------------|--------|---------|-----------|
-| Node.js `child_process` | Built-in | Spawn emacsclient | Standard library module for executing external commands. Use `spawn()` for streaming I/O with emacsclient. |
-
-**Confidence:** MEDIUM  
-**Source:** [Node.js child_process docs](https://www.geeksforgeeks.org/node-js/node-js-child-process/)
-
-**Implementation approach:**
-```typescript
-import { spawn } from 'child_process';
-
-// Example: Invoke emacsclient to get user input
-const emacs = spawn('emacsclient', ['-e', '(read-from-minibuffer "Your question: ")']);
+**Add new parameter for options:**
+```elisp
+(defun mr-x/ask-user-question (question &optional header timeout-ms options)
+  (if options
+      (mr-x/popup-select question options)
+    (mr-x/popup-free-text question)))
 ```
 
-**Why child_process.spawn:**
-- Built-in Node.js module (no dependencies)
-- Streaming I/O (suitable for interactive prompts)
-- Non-blocking async execution
+**No changes needed to TypeScript side:**
+- `emacsclient` spawning stays the same
+- Just pass additional `options` parameter when provided
+- Elisp function handles UI mode switching
 
-**Alternative methods:**
-- `exec()` - Buffers output, suitable for short-running commands
-- `execFile()` - Similar to exec but doesn't spawn shell
-- `fork()` - For spawning Node.js processes only
+## Complete Elisp Stack
 
-**Emacsclient integration notes:**
-- Requires Emacs server running (`M-x server-start` or `(server-start)` in init.el)
-- Use `-e` flag to evaluate Elisp expressions
-- Capture stdout for return values
-- Handle stderr for errors
-- Consider timeout handling for unresponsive Emacs
+### Required Functions
 
-**Confidence caveat:** Search results didn't show specific emacsclient+Node.js examples. This recommendation is based on general Node.js process spawning best practices.
+| Function | Purpose | Lines |
+|----------|---------|-------|
+| `mr-x/popup-select` | Display options, handle C-n/C-p, return selection | ~30 |
+| `mr-x/popup-free-text` | Display prompt, collect multi-line input | ~15 |
+| `mr-x/popup--highlight-line` | Move overlay to current line | ~5 |
+| `mr-x/popup--next-option` | C-n handler | ~3 |
+| `mr-x/popup--prev-option` | C-p handler | ~3 |
+| `mr-x/popup--select` | RET handler, return value | ~5 |
+| `mr-x/popup--cancel` | C-g handler, signal quit | ~3 |
 
-## Build & Deployment
+**Total: ~64 lines of elisp**
 
-### Build Process
+### Required Emacs Primitives
 
-**For production:**
-```bash
-# Compile TypeScript to JavaScript
-tsc
+All built-in, no packages needed:
 
-# Or use esbuild for faster builds (optional)
-esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js
+- `make-overlay` — Highlighting
+- `overlay-put` — Styling
+- `move-overlay` — Navigation
+- `delete-overlay` — Cleanup
+- `display-buffer-at-bottom` — Positioning
+- `set-transient-map` — Keybindings
+- `with-current-buffer` — Buffer management
+- `generate-new-buffer` — Buffer creation
+- `kill-buffer` — Cleanup
+
+### Face for Highlighting
+
+Use existing face or define custom:
+
+```elisp
+;; Option 1: Reuse hl-line face (exists in all Emacs)
+(overlay-put overlay 'face 'hl-line)
+
+;; Option 2: Custom face for more control
+(defface mr-x/popup-selection
+  '((t (:background "#3a3f5a" :foreground "#ffffff")))
+  "Face for selected option in popup buffer.")
 ```
 
-**For development:**
-```bash
-# Direct execution with tsx
-tsx src/index.ts
+**Recommendation:** Start with `hl-line` face (simpler), add custom face if user requests different styling.
 
-# Watch mode for development
-tsx watch src/index.ts
+## Display Buffer Configuration
+
+### For 40% Height (Popper-Style)
+
+```elisp
+(display-buffer buffer
+  '(display-buffer-at-bottom
+    (window-height . 0.4)
+    (inhibit-same-window . t)))
 ```
 
-**Recommended approach:**
-- Development: Use `tsx` for zero-config hot reload
-- Production: Compile with `tsc` to JavaScript, ship dist/ folder
-- Alternative: Use esbuild for faster production builds (optional)
+**Key parameters:**
+- `window-height . 0.4` — 40% of frame height (float = percentage)
+- `inhibit-same-window . t` — Don't reuse selected window
+- `display-buffer-at-bottom` — Position at bottom
 
-**What NOT to use:**
-- Node.js `--experimental-strip-types` (Node.js 23+) - Still experimental, not recommended for production
-- Babel/SWC - Unnecessary complexity with modern TypeScript + esbuild/tsx
+**This matches user's existing popper configuration for terminals.**
 
-### Package Scripts (package.json)
+### Alternative: Let User Control via display-buffer-alist
 
-```json
-{
-  "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "test": "vitest",
-    "test:watch": "vitest watch",
-    "lint": "eslint .",
-    "format": "prettier --write ."
-  }
-}
+If user wants custom positioning:
+
+```elisp
+;; In user's config (not our code)
+(add-to-list 'display-buffer-alist
+  '("\\*Claude Question\\*"
+    (display-buffer-at-bottom)
+    (window-height . 0.5)))  ; User override to 50%
 ```
 
-## Security Considerations
+Our code uses default 0.4, but respects user's `display-buffer-alist` rules.
 
-### Authentication
+## Comparison: Custom vs Frameworks
 
-| Aspect | Recommendation | Rationale |
-|--------|---------------|-----------|
-| stdio transport | No authentication needed | Local process communication, inherently trusted. |
-| If using HTTP | OAuth 2.0 with PKCE | MCP spec requirement. SDK provides OAuth helpers. Avoid static tokens (hard to rotate/audit). |
+### Option A: Custom Buffer (RECOMMENDED)
 
-**Confidence:** HIGH  
-**Source:** [MCP Security Best Practices](https://modelcontextprotocol.io/specification/draft/basic/security_best_practices), [MCP security guide 2025](https://workos.com/blog/mcp-security-risks-best-practices)
+**Pros:**
+- 64 lines of code vs 1000+ lines dependency
+- Full control over UX
+- No version compatibility issues
+- Matches existing `emacsclient` pattern
+- No learning curve for maintainers
 
-**Security best practices for MCP servers:**
-1. **stdio servers (like this project):**
-   - No authentication required (local trust boundary)
-   - Validate all tool inputs with Zod schemas
-   - Sanitize user input before executing external commands (emacsclient)
+**Cons:**
+- Must implement navigation ourselves (trivial)
+- No fuzzy matching (not needed for small option lists)
 
-2. **If deploying remotely (HTTP):**
-   - Use OAuth 2.0 / OIDC (NOT static tokens)
-   - Implement Resource Indicators (RFC 8707) to prevent token mis-redemption
-   - Enforce TLS/mTLS on all connections
-   - Use short-lived tokens with audience scoping
+### Option B: Vertico + Extensions
 
-3. **Common vulnerabilities:**
-   - Prompt injection via context manipulation
-   - Token exposure in logs/URLs
-   - Command injection (sanitize before spawning processes)
+**Pros:**
+- Fuzzy matching built-in
+- Well-tested navigation
 
-**For this project:**
-- stdio = no authentication needed
-- Focus on input validation (Zod) and command sanitization (emacsclient args)
-- No sensitive data in logs
+**Cons:**
+- Designed for minibuffer, not popup buffers
+- `vertico-buffer-mode` shows in separate buffer but still tied to `completing-read`
+- Adds dependency that user must install
+- Would need to force-load in `emacsclient` call
+- Overkill for simple option selection
 
-## Alternative Stacks Considered
+### Option C: Read-Multiple-Choice
 
-### Why NOT Python SDK
+**What:** Built-in Emacs function for multiple choice
+**Pros:** Already in Emacs core
+**Cons:**
+- Uses help buffer, not bottom popup
+- Single-key selection only (no C-n/C-p)
+- Can't customize positioning
+- Text-based, not visual navigation
 
-| Aspect | TypeScript SDK | Python SDK |
-|--------|---------------|------------|
-| Performance | V8 engine, fast I/O | Slower for stdio transport |
-| Type safety | Native TypeScript support | Requires type stubs |
-| Ecosystem fit | Node.js for local tools | Python for AI/ML integrations |
-| Official status | Both official | Both official |
+**Verdict:** Not suitable for requirements (needs C-n/C-p navigation).
 
-**Verdict:** TypeScript is standard for stdio MCP servers. Python better for MCP servers integrating with AI/ML workflows.
+## Implementation Pattern
 
-### Why NOT Bun runtime
+### Phase 1: Basic Popup with Static Selection
 
-| Aspect | Node.js | Bun |
-|--------|---------|-----|
-| Stability | Battle-tested since 2009 | Still evolving (released 2022) |
-| Compatibility | 100% ecosystem support | Some compatibility gaps |
-| Deployment | Universal support (AWS, GCP, etc.) | Limited managed runtime support |
-| Speed | Fast enough for stdio | 4-7x faster than Node.js |
-
-**Verdict:** Node.js is the safe choice for production. Bun is bleeding-edge - not recommended until wider ecosystem adoption.
-
-### Why NOT Deno runtime
-
-| Aspect | Node.js | Deno |
-|--------|---------|-----|
-| npm ecosystem | Full compatibility | Partial npm compat via npm: specifier |
-| SDK support | Official SDK targets Node.js | Would require adaptation |
-| Tooling maturity | Mature LSP, debugging | Good but less mature |
-
-**Verdict:** Node.js remains standard. Deno's security model and TypeScript-first are attractive but ecosystem immature for MCP.
-
-## Installation Checklist
-
-### Greenfield Setup
-
-```bash
-# 1. Initialize project
-mkdir ask-user-mcp
-cd ask-user-mcp
-pnpm init
-
-# 2. Install core dependencies
-pnpm add @modelcontextprotocol/sdk zod
-
-# 3. Install dev dependencies
-pnpm add -D typescript tsx vitest \
-  eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin \
-  prettier eslint-config-prettier eslint-plugin-prettier \
-  @types/node
-
-# 4. Initialize TypeScript
-pnpx tsc --init
-
-# 5. Initialize git (if needed)
-git init
+```elisp
+(defun mr-x/popup-select (prompt options)
+  "Display PROMPT and OPTIONS in bottom popup. Return selected option."
+  (let* ((buffer (generate-new-buffer "*Claude Question*"))
+         (selection 0))
+    (with-current-buffer buffer
+      ;; Render content
+      (insert (propertize prompt 'face 'bold) "\n\n")
+      (dotimes (i (length options))
+        (insert (format "%d. %s\n" (1+ i) (nth i options))))
+      (setq buffer-read-only t))
+    
+    ;; Display at bottom
+    (display-buffer buffer '(display-buffer-at-bottom (window-height . 0.4)))
+    (select-window (get-buffer-window buffer))
+    
+    ;; Read single key (1-9)
+    (let ((key (read-char "Select option: ")))
+      (kill-buffer buffer)
+      (when (and (>= key ?1) (<= key ?9))
+        (nth (- key ?1) options)))))
 ```
 
-### Configuration Files Needed
+### Phase 2: Add C-n/C-p Navigation
 
-1. `tsconfig.json` - TypeScript compiler config (see section above)
-2. `eslint.config.js` - ESLint flat config (see section above)
-3. `prettier.config.js` - Prettier formatting rules
-4. `package.json` - Scripts and dependencies
-5. `.gitignore` - Ignore dist/, node_modules/, etc.
-
-### Recommended Project Structure
-
+```elisp
+(defun mr-x/popup-select (prompt options)
+  "Display PROMPT and OPTIONS in bottom popup with C-n/C-p navigation."
+  (let* ((buffer (generate-new-buffer "*Claude Question*"))
+         (overlay nil)
+         (current-line 0)
+         (done nil)
+         (result nil))
+    
+    ;; Render buffer
+    (with-current-buffer buffer
+      (insert (propertize prompt 'face 'bold) "\n\n")
+      (dolist (option options)
+        (insert option "\n"))
+      (setq buffer-read-only t)
+      (goto-char (point-min))
+      (forward-line 2)
+      
+      ;; Create highlight overlay
+      (setq overlay (make-overlay (line-beginning-position) (line-end-position)))
+      (overlay-put overlay 'face 'hl-line))
+    
+    ;; Display and select
+    (display-buffer buffer '(display-buffer-at-bottom (window-height . 0.4)))
+    (select-window (get-buffer-window buffer))
+    
+    ;; Navigation loop
+    (let ((map (make-sparse-keymap)))
+      (define-key map (kbd "C-n")
+        (lambda () (interactive)
+          (forward-line 1)
+          (move-overlay overlay (line-beginning-position) (line-end-position))))
+      (define-key map (kbd "C-p")
+        (lambda () (interactive)
+          (forward-line -1)
+          (move-overlay overlay (line-beginning-position) (line-end-position))))
+      (define-key map (kbd "RET")
+        (lambda () (interactive)
+          (setq result (buffer-substring-no-properties
+                        (line-beginning-position)
+                        (line-end-position)))
+          (setq done t)))
+      (define-key map (kbd "C-g")
+        (lambda () (interactive)
+          (setq done t)))
+      
+      ;; Keep map active until RET or C-g
+      (set-transient-map map t (lambda () (not done))))
+    
+    ;; Cleanup
+    (delete-overlay overlay)
+    (kill-buffer buffer)
+    result))
 ```
-ask-user-mcp/
-├── src/
-│   ├── index.ts          # Main entry point, MCP server setup
-│   ├── tools/            # Tool implementations
-│   │   └── askUser.ts    # AskUserQuestion tool
-│   ├── emacs/            # Emacs integration logic
-│   │   └── client.ts     # emacsclient wrapper
-│   └── types/            # TypeScript type definitions
-├── dist/                 # Compiled JavaScript (gitignored)
-├── tests/                # Vitest tests
-│   └── askUser.test.ts
-├── tsconfig.json
-├── eslint.config.js
-├── prettier.config.js
-├── package.json
-└── README.md
+
+### Phase 3: Add Free Text Mode
+
+```elisp
+(defun mr-x/popup-free-text (prompt)
+  "Display PROMPT in bottom popup and collect free text input."
+  (let ((buffer (generate-new-buffer "*Claude Question*")))
+    (with-current-buffer buffer
+      (insert (propertize prompt 'face 'bold) "\n\n")
+      (insert (propertize "Type your answer below:\n" 'face 'italic)))
+    
+    (display-buffer buffer '(display-buffer-at-bottom (window-height . 0.4)))
+    (select-window (get-buffer-window buffer))
+    
+    ;; Make buffer editable
+    (with-current-buffer buffer
+      (setq buffer-read-only nil)
+      (goto-char (point-max)))
+    
+    ;; Read until C-c C-c
+    (local-set-key (kbd "C-c C-c")
+      (lambda () (interactive)
+        (setq result (buffer-substring-no-properties
+                      (+ (point-min) 3)  ; Skip prompt lines
+                      (point-max)))))
+    
+    ;; ... wait for C-c C-c ...
+    (recursive-edit)
+    
+    (kill-buffer buffer)
+    result))
 ```
-
-## Confidence Summary
-
-| Area | Confidence | Rationale |
-|------|------------|-----------|
-| MCP SDK | **HIGH** | Official SDK, verified current version (1.25.2), documentation reviewed |
-| Node.js Runtime | **HIGH** | LTS versions verified, Web Crypto requirement confirmed via SDK FAQ |
-| TypeScript Config | **HIGH** | 2025 best practices from multiple authoritative sources |
-| tsx vs ts-node | **HIGH** | Benchmarks and MCP SDK examples confirm tsx preference |
-| Package Manager | **MEDIUM** | pnpm widely recommended but npm acceptable alternative |
-| Testing (Vitest) | **HIGH** | Clear performance/DX advantages, strong 2025 adoption trend |
-| Linting/Formatting | **HIGH** | Flat config is modern standard, versions verified |
-| Logging (Pino) | **MEDIUM** | Performance clear winner, but Winston viable if features needed |
-| Emacsclient Integration | **MEDIUM** | General Node.js practices, no specific MCP+Emacs examples found |
-| Security Practices | **HIGH** | Official MCP spec and OWASP GenAI guidelines |
-
-## Gaps & Future Research
-
-1. **Emacsclient timeout handling** - No documented patterns found for long-running emacsclient interactions. Need to research:
-   - Timeout strategies for unresponsive Emacs
-   - Graceful fallback if Emacs server not running
-   - Error handling for emacsclient failures
-
-2. **MCP Inspector integration** - Official testing tool mentioned but integration patterns not deeply researched. Phase-specific research needed for:
-   - How to configure Inspector for stdio servers
-   - Best practices for protocol validation during development
-
-3. **Structured logging for MCP** - Pino recommended but specific MCP logging patterns not documented. Research:
-   - What events to log (tool calls, errors, context)
-   - Log levels for different MCP operations
-   - Integration with MCP Inspector logs
-
-## Version Update Protocol
-
-This stack was researched on 2026-01-26. To verify currency:
-
-1. **MCP SDK:** Check [@modelcontextprotocol/sdk npm](https://www.npmjs.com/package/@modelcontextprotocol/sdk) for latest 1.x version
-2. **Node.js:** Check [Node.js releases](https://nodejs.org/en/about/previous-releases) for current LTS
-3. **TypeScript:** Check [TypeScript releases](https://www.typescriptlang.org/) for latest stable
-4. **Other deps:** Run `pnpm outdated` to check for updates
-
-**Breaking change watch:**
-- MCP SDK v2 expected Q1 2026 (breaking changes)
-- ESLint major versions (flat config may evolve)
-- Node.js LTS transitions (Node.js 24 → 26 in 2026)
 
 ## Sources
 
-**MCP SDK:**
-- [Official npm package](https://www.npmjs.com/package/@modelcontextprotocol/sdk)
-- [GitHub TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
-- [SDK FAQ (Node.js requirements)](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/docs/faq.md)
+### High Confidence (Official Documentation)
 
-**Node.js & Runtime:**
-- [Node.js LTS releases](https://nodejs.org/en/about/previous-releases)
-- [endoflife.date Node.js](https://endoflife.date/nodejs)
+- [GNU Emacs Lisp Reference Manual - Overlays](https://www.gnu.org/software/emacs/manual/html_node/elisp/Overlays.html)
+- [GNU Emacs Lisp Reference Manual - Buffer Display Action Alists](https://www.gnu.org/software/emacs/manual/html_node/elisp/Buffer-Display-Action-Alists.html)
+- [GNU Emacs Lisp Reference Manual - Text from Minibuffer](https://www.gnu.org/software/emacs/manual/html_node/elisp/Text-from-Minibuffer.html)
+- [GNU Emacs Lisp Reference Manual - Multiple Queries](https://www.gnu.org/software/emacs/manual/html_node/elisp/Multiple-Queries.html)
 
-**TypeScript & Configuration:**
-- [Modern Node.js TypeScript setup 2025](https://dev.to/woovi/a-modern-nodejs-typescript-setup-for-2025-nlk)
-- [tsconfig best practices](https://notes.shiv.info/javascript/2025/04/21/tsconfig-best-practices/)
+### High Confidence (Verified Implementations)
 
-**MCP Transports:**
-- [MCP Transports Specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports)
-- [Transport comparison (stdio vs HTTP vs SSE)](https://mcpcat.io/guides/comparing-stdio-sse-streamablehttp/)
+- [Vertico GitHub](https://github.com/minad/vertico) — Architecture reference (not for reuse)
+- [Popper GitHub](https://github.com/karthink/popper) — Popup positioning patterns
+- [hl-line-mode implementation](https://posts.tonyaldon.com/2022-03-05-i-bet-you-use-hl-line-mode/) — Overlay movement pattern
 
-**Tooling Comparisons:**
-- [tsx vs ts-node](https://betterstack.com/community/guides/scaling-nodejs/tsx-vs-ts-node/)
-- [pnpm vs npm vs yarn 2025](https://dev.to/hamzakhan/npm-vs-yarn-vs-pnpm-which-package-manager-should-you-use-in-2025-2f1g)
-- [Vitest vs Jest 2025](https://medium.com/@ruverd/jest-vs-vitest-which-test-runner-should-you-use-in-2025-5c85e4f2bda9)
-- [Pino vs Winston](https://betterstack.com/community/comparisons/pino-vs-winston/)
+### Medium Confidence (Community Resources)
 
-**ESLint & Prettier:**
-- [ESLint flat config guide 2025](https://advancedfrontends.com/eslint-flat-config-typescript-javascript/)
-- [TypeScript ESLint Prettier setup](https://medium.com/@gabrieldrouin/node-js-2025-guide-how-to-setup-express-js-with-typescript-eslint-and-prettier-b342cd21c30d)
+- [Mastering Emacs - Window Management](https://www.masteringemacs.org/article/demystifying-emacs-window-manager)
+- [Karthinks - Window Management Almanac](https://karthinks.com/software/emacs-window-management-almanac/)
+- [System Crafters - Vertico Guide](https://systemcrafters.net/emacs-tips/streamline-completions-with-vertico/)
 
-**MCP Testing & Security:**
-- [MCP testing best practices](https://www.merge.dev/blog/mcp-server-testing)
-- [MCP Inspector](https://github.com/modelcontextprotocol/inspector)
-- [MCP Security Best Practices (official spec)](https://modelcontextprotocol.io/specification/draft/basic/security_best_practices)
-- [OWASP GenAI MCP Security Guide](https://genai.owasp.org/resource/cheatsheet-a-practical-guide-for-securely-using-third-party-mcp-servers-1-0/)
-- [MCP security guide 2025](https://workos.com/blog/mcp-security-risks-best-practices)
+## Recommendation Summary
 
-**Node.js child_process:**
-- [Node.js child_process guide](https://www.geeksforgeeks.org/node-js/node-js-child-process/)
+**Stack dimension:** Emacs popup buffer UI
+
+**Build custom popup buffer using:**
+
+1. `display-buffer-at-bottom` with `window-height . 0.4` for positioning
+2. `make-overlay` + `move-overlay` for selection highlighting
+3. `set-transient-map` for C-n/C-p navigation keybindings
+4. `generate-new-buffer` for temporary display buffer
+5. `hl-line` face for highlight styling (or custom face)
+
+**Total complexity:** ~64 lines of elisp, zero external dependencies
+
+**Why not frameworks:** Vertico/Helm/Ivy are minibuffer completion tools, not popup buffer builders. Custom implementation is simpler and matches project's direct `emacsclient` integration pattern.
+
+**Integration:** Add `options` parameter to existing `mr-x/ask-user-question` function. If options provided, use `mr-x/popup-select`. Otherwise use `mr-x/popup-free-text`. TypeScript side unchanged.

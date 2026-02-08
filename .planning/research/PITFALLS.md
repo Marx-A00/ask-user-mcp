@@ -1,667 +1,442 @@
-# Domain Pitfalls
+# Domain Pitfalls: Emacs Popup Buffer UI
 
-**Domain:** MCP Server with External Process Integration (emacsclient)
-**Researched:** 2026-01-26
-**Confidence:** HIGH (verified with official sources and 2025-2026 security research)
+**Domain:** Popup buffer UI with C-n/C-p navigation and emacsclient blocking
+**Researched:** 2026-02-08
+**Confidence:** MEDIUM (WebSearch-verified with official Emacs documentation)
 
 ## Critical Pitfalls
 
-These mistakes cause security vulnerabilities, data loss, or require complete rewrites.
+Mistakes that cause rewrites, blocking failures, or major integration issues.
 
-### Pitfall 1: Command Injection via Unsanitized Input
+### Pitfall 1: emacsclient Return Value Escaping
+**What goes wrong:** `emacsclient --eval` automatically quotes string results, breaking shell script parsing. A function returning `"hello"` becomes `"\"hello\""` on stdout, requiring complex unescaping.
 
-**What goes wrong:**
-Using `child_process.exec()` or building shell command strings with user-provided questions leads to command injection attacks. An attacker can inject shell metacharacters (`;`, `$()`, backticks, `|`) to execute arbitrary commands.
-
-**Why it happens:**
-The PRD shows using `execSync()` with string interpolation:
-```javascript
-const escapedQuestion = question.replace(/"/g, '\\"').replace(/\n/g, '\\n');
-const result = execSync(`emacsclient --eval '(read-string "${escapedQuestion} ")'`);
-```
-
-This is vulnerable because:
-- `exec()` spawns `/bin/sh`, which interprets shell metacharacters
-- Manual escaping is error-prone and incomplete (doesn't cover all attack vectors)
-- A malicious question like `"; rm -rf / #` could execute arbitrary commands
+**Why it happens:** Emacs server delegates to `server-eval-and-print`, which uses `pp` to format output for `read` compatibility, automatically quoting strings.
 
 **Consequences:**
-- **Security:** Remote Code Execution (RCE) - complete system compromise
-- **Severity:** CRITICAL - 88% of MCP servers have credential exposure issues, command injection compounds this
-- **Real-world precedent:** Trend Micro discovered SQL injection → prompt injection in Anthropic's reference SQLite MCP server (June 2025)
+- MCP server receives incorrectly escaped JSON
+- Shell scripts parsing output break
+- Return values need post-processing
 
 **Prevention:**
-1. **NEVER use `exec()` or `execSync()` with user input**
-2. **Use `spawn()` or `execFile()` with argument arrays** - bypasses shell entirely
-3. **For elisp strings, use proper elisp escaping** or pass via stdin/temp file instead of command-line arguments
-
-Example safe approach:
-```javascript
-const { spawn } = require('child_process');
-
-// Option A: Use elisp escaping and spawn with args array
-const elisp = `(read-string ${JSON.stringify(question)})`;
-const child = spawn('emacsclient', ['--eval', elisp], { timeout: 300000 });
-
-// Option B: Pass question via temp file (safer for long/complex questions)
-const tempFile = '/tmp/claude-question.txt';
-fs.writeFileSync(tempFile, question);
-const child = spawn('emacsclient', ['--eval', `(read-string (f-read-text "${tempFile}"))`]);
-```
+- Use `prin1-to-string` instead of relying on default `server-eval-and-print`
+- Consider alternative return mechanisms (temp files, dedicated return protocol)
+- Test emacsclient output format early in development
+- Consider `ebse` tool pattern (grettke/ebse) for unquoted results
 
 **Detection:**
-- Search codebase for `exec(`, `execSync(`, `eval(`, or string concatenation in spawn calls
-- Test with malicious inputs: `"; echo VULNERABLE #`, `$(whoami)`, `` `id` ``
-- Use linters: `eslint-plugin-security` detects command injection patterns
+- Shell script tests fail with quote parsing errors
+- JSON parsing fails in MCP server
+- Return values have unexpected escape characters
 
-**Phase mapping:**
-- **Phase 1 (Core MCP Server):** Must use `spawn()` with argument arrays from day one
-- **Phase 2 (Error Handling):** Add input validation and length limits as defense-in-depth
+**Phase impact:** Core implementation phase (MVP) - must be resolved before MCP integration works.
 
 **Sources:**
-- [Preventing Command Injection in Node.js](https://auth0.com/blog/preventing-command-injection-attacks-in-node-js-apps/)
-- [MCP Security Report 2025](https://astrix.security/learn/blog/state-of-mcp-server-security-2025/)
+- [GitHub - grettke/ebse: Get unquoted result from Emacs server eval](https://github.com/grettke/ebse)
+- [emacsclient --eval return code contains weird invisible characters · Issue #15362](https://github.com/syl20bnr/spacemacs/issues/15362)
 
 ---
 
-### Pitfall 2: Zombie and Orphan Process Accumulation
+### Pitfall 2: emacsclient Blocking Without Proper server-edit
+**What goes wrong:** emacsclient blocks indefinitely if popup doesn't call `server-edit` or exits abnormally. Caller hangs waiting for Emacs response.
 
-**What goes wrong:**
-Child processes (emacsclient) are spawned but never properly cleaned up when:
-- The parent MCP server crashes or restarts
-- Timeouts occur but the child isn't killed
-- Signal handlers aren't registered (SIGINT, SIGTERM)
-- The `exit` event isn't handled
-
-**Why it happens:**
-Node.js child processes don't automatically terminate when the parent exits. Without explicit cleanup:
-- Zombie processes accumulate (completed but not reaped)
-- Orphan processes run indefinitely, consuming PIDs
-- On Cloud Foundry / container environments, PID exhaustion causes deployment failures
+**Why it happens:** emacsclient waits for explicit `C-x #` (server-edit) signal before returning. If popup is dismissed without calling server-edit, the client never receives completion signal.
 
 **Consequences:**
-- **Resource exhaustion:** Run out of PIDs (max 32768 on Linux)
-- **Memory leaks:** Zombie processes hold process table entries
-- **Container failures:** Kubernetes pod eviction due to resource limits
-- **Debugging nightmare:** Stale emacsclient processes interfere with new ones
+- MCP server request times out
+- emacsclient process hangs
+- No error propagation to caller
+- Resources leak on Emacs side
 
 **Prevention:**
-
-```javascript
-const activeChildren = new Set();
-
-function spawnEmacsclient(question) {
-  const child = spawn('emacsclient', ['--eval', elisp], { 
-    timeout: 300000,
-    killSignal: 'SIGTERM'
-  });
-  
-  activeChildren.add(child);
-  
-  // Cleanup on normal exit
-  child.on('exit', (code, signal) => {
-    activeChildren.delete(child);
-    console.error(`emacsclient exited: code=${code}, signal=${signal}`);
-  });
-  
-  // Cleanup on error
-  child.on('error', (err) => {
-    activeChildren.delete(child);
-    console.error(`emacsclient error: ${err.message}`);
-  });
-  
-  return child;
-}
-
-// Cleanup all children on process exit
-process.on('exit', () => {
-  activeChildren.forEach(child => {
-    if (!child.killed) {
-      child.kill('SIGTERM');
-    }
-  });
-});
-
-// Handle signals gracefully
-['SIGINT', 'SIGTERM'].forEach(signal => {
-  process.on(signal, () => {
-    console.error(`Received ${signal}, cleaning up...`);
-    activeChildren.forEach(child => child.kill('SIGTERM'));
-    process.exit(0);
-  });
-});
-```
+- ALWAYS call `server-edit` on normal completion
+- Call `server-edit-abort` on cancellation/error paths
+- Bind cleanup to `kill-buffer-hook` as failsafe
+- Test timeout behavior explicitly
 
 **Detection:**
-- Monitor process count: `ps aux | grep emacsclient | wc -l`
-- Check for zombies: `ps aux | grep 'Z'` (Z = zombie state)
-- Track PID usage: `cat /proc/sys/kernel/pid_max` vs current allocation
-- Container metrics: Watch PID usage in Kubernetes/Docker
+- emacsclient stuck in "Waiting for Emacs..." state
+- MCP requests never complete
+- Manual buffer kill required to unblock client
 
-**Phase mapping:**
-- **Phase 1 (Core MCP Server):** Basic cleanup (exit event handlers)
-- **Phase 2 (Error Handling):** Signal handlers and timeout cleanup
-- **Phase 3 (Production Hardening):** Process tracking, PID monitoring
+**Phase impact:** Core implementation phase (MVP) - blocking breaks entire MCP integration.
 
 **Sources:**
-- [Managing Orphaned Node.js Processes](https://medium.com/@arunangshudas/5-tips-for-cleaning-orphaned-node-js-processes-196ceaa6d85e)
-- [Zombie Processes in Node.js](https://saturncloud.io/blog/what-is-a-zombie-process-and-how-to-avoid-it-when-spawning-nodejs-child-processes-on-cloud-foundry/)
+- [emacsclient Options (GNU Emacs Manual)](https://www.gnu.org/software/emacs/manual/html_node/emacs/emacsclient-Options.html)
+- [save-buffers-kill-terminal and emacsclient --no-wait](https://emacs-devel.gnu.narkive.com/DTapMGPc/save-buffers-kill-terminal-and-emacsclient-no-wait)
 
 ---
 
-### Pitfall 3: Stdio Deadlock and Buffer Overflow
+### Pitfall 3: Keymap Override Hierarchy Confusion
+**What goes wrong:** C-n/C-p bindings don't work because other keymaps take precedence. User presses C-n expecting navigation, but gets `next-line` or some minor mode binding instead.
 
-**What goes wrong:**
-MCP uses JSON-RPC over stdio (stdin/stdout). If the MCP server writes to `stdout` for debugging or the child process produces unexpected output, it corrupts the JSON-RPC stream, causing protocol errors and deadlocks.
-
-**Why it happens:**
-- **Stdout contamination:** `console.log()` writes to stdout, breaking JSON-RPC
-- **Child stdout mixing:** emacsclient output goes to parent's stdout
-- **Buffer overflow:** Large responses (>200KB default `maxBuffer`) cause child process termination
-- **Partial reads:** JSON-RPC messages split across multiple reads, incomplete parsing
+**Why it happens:** Emacs keymap hierarchy is complex. Keymaps are checked in order: `overriding-terminal-local-map` → `overriding-local-map` → `emulation-mode-map-alists` → minor modes → major mode → global. Popup keymap must be placed high enough in hierarchy.
 
 **Consequences:**
-- **Protocol failure:** Client receives malformed JSON, connection drops
-- **Silent failures:** Debugging output masks real responses
-- **Data loss:** Large user responses (>200KB) truncated or process killed
-- **Deadlock:** Parent waits for child stdout, child waits for parent to read
+- Navigation keys don't work as expected
+- User confusion (keys do wrong thing)
+- Popup feels broken/non-functional
+- Accessibility issues for keyboard users
 
 **Prevention:**
-
-```javascript
-// 1. NEVER write to stdout except for JSON-RPC responses
-// Use stderr for all debugging
-console.log = console.error; // Override to prevent accidents
-console.debug = console.error;
-
-// 2. Redirect child process streams properly
-const child = spawn('emacsclient', args, {
-  stdio: ['pipe', 'pipe', 'inherit'], // stdin, stdout, stderr
-  timeout: 300000,
-  maxBuffer: 1024 * 1024 // 1MB for long responses
-});
-
-// 3. Handle partial JSON-RPC messages
-let buffer = '';
-process.stdin.on('data', (chunk) => {
-  buffer += chunk.toString();
-  
-  let newlineIndex;
-  while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-    const line = buffer.slice(0, newlineIndex);
-    buffer = buffer.slice(newlineIndex + 1);
-    
-    if (line.trim()) {
-      try {
-        const message = JSON.parse(line);
-        handleMessage(message);
-      } catch (err) {
-        console.error(`JSON parse error: ${err.message}`);
-        // Don't respond to malformed messages
-      }
-    }
-  }
-});
-
-// 4. Increase maxBuffer for long user inputs
-// (emacsclient responses should be small, but plan for 10KB+ answers)
-```
+- Use minor mode keymap for popup bindings (not just buffer-local keymap)
+- Derive from `special-mode` which suppresses insert keys
+- Test with common minor modes active (company, flycheck, etc.)
+- Use `suppress-keymap` to disable insertion
+- Consider `overriding-local-map` for temporary exclusive control
 
 **Detection:**
-- Test with large inputs: Questions >1KB, answers >10KB
-- Monitor stderr: Any "maxBuffer exceeded" errors
-- Protocol debugging: Enable MCP client debug mode, check for parse errors
-- Grep codebase: Search for `console.log`, `console.debug` not redirected to stderr
+- C-n moves to next line instead of next option
+- C-p scrolls up instead of previous option
+- Keybindings work inconsistently depending on what modes are active
 
-**Phase mapping:**
-- **Phase 1 (Core MCP Server):** Stdout hygiene, basic buffering
-- **Phase 2 (Error Handling):** maxBuffer tuning, robust JSON parsing
+**Phase impact:** Core implementation phase (MVP) - unusable without working navigation.
 
 **Sources:**
-- [Understanding MCP Through Raw STDIO Communication](https://foojay.io/today/understanding-mcp-through-raw-stdio-communication/)
-- [Node.js Child Process Documentation](https://nodejs.org/api/child_process.html)
+- [Mastering Key Bindings in Emacs - Mastering Emacs](https://www.masteringemacs.org/article/mastering-key-bindings-emacs)
+- [Changing Key Bindings (GNU Emacs Lisp Reference Manual)](https://www.gnu.org/software/emacs/manual/html_node/elisp/Changing-Key-Bindings.html)
 
 ---
 
-### Pitfall 4: Long-Running Operation Timeout Without Progress Feedback
+### Pitfall 4: Buffer Cleanup Race Conditions
+**What goes wrong:** Popup buffer isn't cleaned up properly. Either buffer leaks (never killed) or gets killed too early (while emacsclient still waiting).
 
-**What goes wrong:**
-The 5-minute timeout for user responses is implemented, but:
-- The MCP client times out before 5 minutes (default 60 seconds in many clients)
-- No progress notifications are sent, so the client assumes the server is dead
-- The connection is severed before the user responds, even if they're typing
-
-**Why it happens:**
-JSON-RPC is fundamentally synchronous - a request blocks until a response is received. Most MCP clients have aggressive timeouts (30-60 seconds) that don't match the server's 5-minute wait time. Without progress notifications, the client has no way to know the server is still alive and waiting for user input.
+**Why it happens:** Multiple cleanup paths exist: `quit-window`, `kill-buffer`, `server-edit`, and `kill-buffer-hook`. If not coordinated, they race or miss each other.
 
 **Consequences:**
-- **User frustration:** User types response but connection already dropped
-- **Wasted work:** Claude re-attempts the same question or gives up entirely
-- **Unreliability:** Tool works for quick answers (<60s) but fails for thoughtful ones
-- **Support burden:** "It just times out" with no clear error message
+- Buffer accumulation (memory leak)
+- emacsclient receives wrong completion status
+- Popup reappears when cycling buffers
+- Cleanup hooks don't run
 
 **Prevention:**
-
-The MCP spec (2025-11-25) introduces **progress notifications** for long-running operations:
-
-```javascript
-// Option A: Progress notifications (MCP 2025-11-25)
-async function askUser(question, requestId) {
-  const progressToken = `ask-${Date.now()}`;
-  
-  // Start progress reporting
-  const progressInterval = setInterval(() => {
-    sendNotification('notifications/progress', {
-      progressToken,
-      progress: 0, // Indeterminate
-      total: 1
-    });
-  }, 5000); // Every 5 seconds
-  
-  try {
-    const answer = await spawnEmacsclientPromise(question);
-    clearInterval(progressInterval);
-    return answer;
-  } catch (err) {
-    clearInterval(progressInterval);
-    throw err;
-  }
-}
-
-// Option B: Async hand-off pattern (recommended for NEW MCP spec)
-// Return immediately, poll for completion
-const pendingQuestions = new Map();
-
-function askUserAsync(question) {
-  const taskId = `task-${Date.now()}`;
-  pendingQuestions.set(taskId, { status: 'pending', question });
-  
-  // Spawn emacsclient in background
-  spawnEmacsclient(question).then(answer => {
-    pendingQuestions.set(taskId, { status: 'completed', answer });
-  }).catch(err => {
-    pendingQuestions.set(taskId, { status: 'failed', error: err.message });
-  });
-  
-  // Return task ID immediately (no blocking)
-  return { taskId, status: 'pending' };
-}
-
-// Client polls via tools/call with { taskId }
-function getTaskStatus(taskId) {
-  return pendingQuestions.get(taskId) || { status: 'not_found' };
-}
-```
-
-**Better approach for this project:**
-Since we're interacting with a human user who can respond within seconds to minutes, **progress notifications** are the right choice. The async hand-off pattern is better for long-running computations (>5 minutes) where intermediate results matter.
+- Use `quit-window` with KILL parameter for atomic window+buffer cleanup
+- Ensure `server-edit` runs BEFORE `kill-buffer`
+- Add cleanup to `kill-buffer-hook` as failsafe (but check buffer-live-p)
+- Test both normal completion and cancellation paths
+- Beware: `kill-buffer-hook` doesn't run for buffers created with `inhibit-buffer-hooks`
 
 **Detection:**
-- Test with slow responses: Delay answering for 90 seconds
-- Monitor client logs: Look for "Request timeout" or "Connection closed"
-- Check MCP client timeout config: `request_timeout` in agent-shell config
-- Warning sign: User reports "sometimes it works, sometimes it doesn't" (timing-dependent)
+- `M-x ibuffer` shows accumulating popup buffers
+- Buffer list grows with hidden ask-user buffers
+- `C-x b` autocomplete shows old popup buffers
+- Memory usage increases over time
 
-**Phase mapping:**
-- **Phase 1 (Core MCP Server):** Implement basic timeout
-- **Phase 2 (Error Handling):** Add progress notifications
-- **Phase 3 (Production Hardening):** Client timeout coordination, configurable timeouts
+**Phase impact:** Production hardening - leaks become visible with repeated use.
 
 **Sources:**
-- [Build Timeout-Proof MCP Tools](https://www.arsturn.com/blog/no-more-timeouts-how-to-build-long-running-mcp-tools-that-actually-finish-the-job)
-- [MCP Specification 2025-11-25 - Tasks](https://mcp-bundler.com/2025/12/08/mcp-specification-end-users-server-providers/)
-- [SEP-1391: Long-Running Operations](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/1391)
-
----
-
-### Pitfall 5: emacsclient Failure Modes Not Handled
-
-**What goes wrong:**
-The MCP server assumes emacsclient will always work, but fails when:
-- Emacs server isn't running (`server-start` not called)
-- Display environment variables are wrong (Wayland vs X11)
-- Socket file was deleted or in wrong location
-- systemd user service conflicts with manual `server-start`
-- Multiple Emacs servers running (wrong one responds)
-
-**Why it happens:**
-`emacsclient` has many failure modes specific to the desktop environment, systemd integration, and Emacs configuration. The error messages are cryptic ("can't open display :0", "waiting for emacs...", "no socket found") and the server crashes or hangs instead of gracefully degrading.
-
-**Consequences:**
-- **Total failure:** MCP server crashes on first question, Claude can't proceed
-- **Silent hang:** emacsclient waits indefinitely for server that will never respond
-- **Wrong Emacs instance:** Question appears in unrelated Emacs session
-- **User confusion:** "It worked yesterday, now it's broken" (systemd restart)
-
-**Prevention:**
-
-```javascript
-// 1. Detect emacsclient availability before server starts
-function checkEmacsServer() {
-  try {
-    const result = execSync('emacsclient --eval "(+ 1 1)"', {
-      timeout: 5000,
-      encoding: 'utf-8'
-    });
-    if (result.trim() !== '2') {
-      throw new Error('Emacs server not responding correctly');
-    }
-    return true;
-  } catch (err) {
-    console.error('Emacs server check failed:', err.message);
-    console.error('Hints:');
-    console.error('  - Is Emacs running with (server-start)?');
-    console.error('  - Check: systemctl --user status emacs');
-    console.error('  - Try: emacsclient --eval "(+ 1 1)"');
-    return false;
-  }
-}
-
-// 2. Provide fallback when emacsclient fails
-async function askUserWithFallback(question) {
-  try {
-    // Try emacsclient first
-    return await askViaEmacsclient(question);
-  } catch (err) {
-    console.error(`emacsclient failed: ${err.message}`);
-    
-    // Fallback: Write to file and notify
-    const fallbackPath = '/tmp/claude-question.txt';
-    fs.writeFileSync(fallbackPath, `Claude asks: ${question}\n\nWrite answer to: /tmp/claude-answer.txt`);
-    
-    // Wait for answer file (with timeout)
-    return await waitForFile('/tmp/claude-answer.txt', 300000);
-  }
-}
-
-// 3. Detect specific failure modes
-function diagnoseEmacsclientError(stderr) {
-  if (stderr.includes("can't open display")) {
-    return "Display environment variable mismatch (Wayland vs X11). Check $DISPLAY in Emacs server.";
-  }
-  if (stderr.includes("waiting for emacs")) {
-    return "Emacs server not responding. Try: systemctl --user restart emacs";
-  }
-  if (stderr.includes("no socket")) {
-    return "Socket file not found. Check server-socket-dir and ensure server-start was called.";
-  }
-  return stderr;
-}
-```
-
-**Detection:**
-- **Pre-deployment check:** Run `emacsclient --eval "(+ 1 1)"` in CI/testing
-- **Startup health check:** Server initialization runs emacsclient test
-- **Monitor stderr:** Capture and parse emacsclient error messages
-- **User reports:** "emacsclient: can't find socket" → wrong server-socket-dir
-
-**Phase mapping:**
-- **Phase 1 (Core MCP Server):** Basic error handling (catch and report)
-- **Phase 2 (Error Handling):** Startup health checks, fallback mechanism
-- **Phase 3 (Production Hardening):** Diagnostic messages, recovery strategies
-
-**Sources:**
-- [GNU Emacs Manual: Invoking emacsclient](https://www.gnu.org/software/emacs/manual/html_node/emacs/Invoking-emacsclient.html)
-- [emacsclient Display Errors](https://bbs.archlinux.org/viewtopic.php?id=281813)
-- [Daemon Issues with systemd](https://github.com/doomemacs/doomemacs/issues/7699)
+- [Killing Buffers (GNU Emacs Lisp Reference Manual)](https://www.gnu.org/software/emacs/manual/html_node/elisp/Killing-Buffers.html)
+- [bug#77323: [PATCH] Allow temp buffer cleanup in ediff-current-file](https://lists.gnu.org/archive/html/bug-gnu-emacs/2025-03/msg02615.html)
 
 ---
 
 ## Moderate Pitfalls
 
-These mistakes cause delays, technical debt, or degraded UX, but are fixable without rewrites.
+Mistakes that cause delays, poor UX, or technical debt.
 
-### Pitfall 6: Credential Exposure in Environment Variables
+### Pitfall 5: display-buffer-alist Bypass
+**What goes wrong:** Popup doesn't appear in expected location (bottom of frame). It opens in random window or splits existing window unexpectedly.
 
-**What goes wrong:**
-While this specific project doesn't use API keys, 79% of MCP servers pass credentials via environment variables. If your MCP server grows to support authentication (e.g., verifying Claude's identity, logging questions), storing secrets in ENV vars exposes them to:
-- Child processes (inherited by emacsclient spawns)
-- Process listings (`ps aux -e`)
-- Error messages and stack traces
-- Log files and crash dumps
+**Why it happens:** Not all buffer display methods respect `display-buffer-alist`. Using `switch-to-buffer` or `set-buffer` bypasses display rules entirely. Popup must use `display-buffer` or `pop-to-buffer` with proper action list.
 
-**Why it happens:**
-Environment variables are the easiest way to configure servers, and many tutorials recommend them. The MCP ecosystem has normalized this pattern (88% of servers use credentials, 79% via ENV).
+**Consequences:**
+- Popup appears in wrong location
+- Splits user's carefully arranged windows
+- Breaks popper.el integration
+- Inconsistent with user's window management setup
 
 **Prevention:**
-- **Use secret management:** OS keychain, encrypted config files, or secret management services
-- **Avoid ENV for secrets:** If you must use ENV, scrub it before spawning children:
-  ```javascript
-  const child = spawn('emacsclient', args, {
-    env: { ...process.env, API_KEY: undefined, SECRET: undefined }
-  });
-  ```
-- **Never log ENV:** Redact `process.env` from error messages
+- ALWAYS use `display-buffer` with explicit action list
+- Specify `display-buffer-at-bottom` or similar action function
+- Test with various window configurations (splits, tabs, multiple frames)
+- Don't use `switch-to-buffer` for popup display
+- Consider popper.el integration for consistency
 
-**Phase mapping:**
-- **Out of scope for v1:** This project doesn't need auth yet
-- **Phase X (Future: Auth/Logging):** Implement secret management before adding credentials
+**Detection:**
+- Popup appears at top instead of bottom
+- Existing window gets reused unexpectedly
+- Popup behavior changes based on window layout
+- User reports "window management is broken"
+
+**Phase impact:** UX refinement phase - works but feels janky.
 
 **Sources:**
-- [MCP Security Survival Guide](https://towardsdatascience.com/the-mcp-security-survival-guide-best-practices-pitfalls-and-real-world-lessons/)
+- [Demystifying Emacs's Window Manager - Mastering Emacs](https://www.masteringemacs.org/article/demystifying-emacs-window-manager)
+- [The Emacs Window Management Almanac | Karthinks](https://karthinks.com/software/emacs-window-management-almanac/)
 
 ---
 
-### Pitfall 7: No Input Validation or Length Limits
+### Pitfall 6: Focus Stealing from User's Working Buffer
+**What goes wrong:** When popup appears, focus moves to popup buffer. User loses position in code they were editing.
 
-**What goes wrong:**
-Without validation:
-- **DoS via large inputs:** Question is 10MB of text, crashes emacsclient or fills disk
-- **Control character injection:** Question contains `\x00`, `\x1B` (escape sequences), breaks terminal
-- **Encoding issues:** Non-UTF8 characters cause parsing errors
-- **Buffer overflows:** Unchecked length breaks fixed-size buffers in Emacs
+**Why it happens:** `display-buffer` actions can specify whether to select the new window. Without `(inhibit-same-window . t)` and `(inhibit-switch-frame . t)`, Emacs may switch focus.
+
+**Consequences:**
+- Cursor moves to popup, breaking user's flow
+- User must manually switch back to work buffer after responding
+- `save-excursion` in user code gets disrupted
+- Point position lost
 
 **Prevention:**
-```javascript
-function validateQuestion(question) {
-  if (typeof question !== 'string') {
-    throw new Error('Question must be a string');
-  }
-  
-  if (question.length === 0) {
-    throw new Error('Question cannot be empty');
-  }
-  
-  if (question.length > 10000) { // 10KB limit
-    throw new Error('Question too long (max 10000 characters)');
-  }
-  
-  // Check for control characters (except \n, \t)
-  if (/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/.test(question)) {
-    throw new Error('Question contains invalid control characters');
-  }
-  
-  // Ensure valid UTF-8
-  if (Buffer.byteLength(question, 'utf8') !== question.length) {
-    throw new Error('Question contains invalid UTF-8 sequences');
-  }
-  
-  return question;
-}
-```
+- Use `(inhibit-same-window . t)` in display-buffer action
+- Keep `(current-buffer)` unchanged after popup creation
+- Test that point position unchanged in original buffer
+- Consider whether popup actually needs focus (may not for read-only prompts)
 
-**Phase mapping:**
-- **Phase 1 (Core MCP Server):** Basic type and length checks
-- **Phase 2 (Error Handling):** Control character filtering, encoding validation
+**Detection:**
+- After popup appears, cursor is in popup instead of work buffer
+- User must `C-x o` to continue working
+- `(current-buffer)` changes after popup creation
+
+**Phase impact:** UX refinement phase - functional but annoying.
 
 **Sources:**
-- [MCP Best Practices: Input Validation](https://modelcontextprotocol.info/docs/best-practices/)
+- [The Zen of Buffer Display (GNU Emacs Lisp Reference Manual)](https://www.gnu.org/software/emacs/manual/html_node/elisp/The-Zen-of-Buffer-Display.html)
+- [Emacs window management tweaking | The Art Of Not Asking Why](https://taonaw.com/2025/05/03/emacs-window-management-tweaking.html)
 
 ---
 
-### Pitfall 8: Synchronous Operations Block Event Loop
+### Pitfall 7: Read-Only Buffer Violations
+**What goes wrong:** If popup buffer is read-only (for safety), internal code may still try to modify it, causing `buffer-read-only` errors.
 
-**What goes wrong:**
-Using `execSync()` blocks the entire Node.js event loop during the 5-minute wait for user response. This prevents:
-- Handling other JSON-RPC messages (if client sends cancellation or other requests)
-- Processing signals (SIGTERM delayed until execSync completes)
-- Responding to health checks or progress requests
+**Why it happens:** Setting `buffer-read-only` prevents ALL modifications. Programmatic insertions (for rendering options) will fail unless wrapped with `inhibit-read-only`.
 
-**Why it happens:**
-Synchronous APIs are simpler to write (no promises/callbacks), but Node.js is fundamentally async. Blocking the event loop defeats the runtime's core design.
+**Consequences:**
+- Errors when trying to update popup content
+- Option rendering fails
+- Dynamic content updates break
+- User sees incomplete/empty popup
 
 **Prevention:**
-Use `spawn()` with promise wrapper:
-```javascript
-function askViaEmacsclient(question) {
-  return new Promise((resolve, reject) => {
-    const child = spawn('emacsclient', ['--eval', elisp], {
-      timeout: 300000
-    });
-    
-    let stdout = '';
-    let stderr = '';
-    
-    child.stdout.on('data', (chunk) => stdout += chunk);
-    child.stderr.on('data', (chunk) => stderr += chunk);
-    
-    child.on('exit', (code, signal) => {
-      if (code === 0) {
-        const answer = stdout.trim().replace(/^"|"$/g, '');
-        resolve(answer);
-      } else {
-        reject(new Error(`emacsclient exited ${code}: ${stderr}`));
-      }
-    });
-    
-    child.on('error', reject);
-  });
-}
-```
+- Use `let ((inhibit-read-only t))` for programmatic modifications
+- Set read-only AFTER initial content insertion
+- Use `with-silent-modifications` for updates
+- Test that dynamic updates work with read-only buffer
 
-**Phase mapping:**
-- **Phase 1 (Core MCP Server):** Use async spawn() from the start
+**Detection:**
+- `buffer-read-only` errors in *Messages*
+- Popup content doesn't update when options change
+- Errors when trying to render option list
+
+**Phase impact:** Core implementation phase - breaks option rendering if read-only set too early.
 
 **Sources:**
-- [Node.js Best Practices: Avoid Blocking](https://nodejs.org/en/docs/guides/blocking-vs-non-blocking/)
+- [Read Only Buffers (GNU Emacs Lisp Reference Manual)](https://www.gnu.org/software/emacs/manual/html_node/elisp/Read-Only-Buffers.html)
+- [27.7 Read-Only Buffers | Emacs Docs](https://emacsdocs.org/docs/elisp/Read-Only-Buffers)
+
+---
+
+### Pitfall 8: quit-window vs kill-buffer Semantics
+**What goes wrong:** Using wrong cleanup function. `quit-window` tries to restore previous window config, `kill-buffer` just kills. Choosing wrong one causes UX issues.
+
+**Why it happens:** `quit-window` uses `quit-restore` window parameter to decide whether to delete window, switch buffer, or delete frame. `kill-buffer` doesn't touch window at all.
+
+**Consequences:**
+- Using `kill-buffer`: Window remains showing "next" buffer (often *scratch*), wasting screen space
+- Using `quit-window` without KILL: Buffer buried but not killed, accumulates over time
+- Window layout disrupted when popup closes
+
+**Prevention:**
+- Use `quit-window` with KILL=t for atomic cleanup: `(quit-window t)`
+- This deletes window AND kills buffer in one operation
+- Ensure `display-buffer` sets `quit-restore` parameter properly
+- Test that window disappears after popup closes
+
+**Detection:**
+- Window remains after popup dismissed (showing *scratch* or other buffer)
+- Popup buffers accumulate in buffer list
+- Window layout changes unexpectedly after popup
+
+**Phase impact:** UX refinement phase - cleanup feels incomplete.
+
+**Sources:**
+- [Quitting Windows (GNU Emacs Lisp Reference Manual)](https://www.gnu.org/software/emacs/manual/html_node/elisp/Quitting-Windows.html)
+- [Quit and Close Emacs Special Windows Like Help and Compilation Results](https://christiantietze.de/posts/2019/10/emacs-quit-special-windows/)
+
+---
+
+### Pitfall 9: Process Filter Race Conditions
+**What goes wrong:** If popup implementation involves process filters (for external communication), filters can run while other filters are running, causing state corruption.
+
+**Why it happens:** Emacs runs process filters whenever data arrives, even during existing filter execution. Functions like `process-send-string` both send AND read, triggering filters unexpectedly.
+
+**Consequences:**
+- Corrupted popup state
+- Out-of-order message processing
+- Duplicate responses sent to MCP server
+- Hard-to-reproduce bugs
+
+**Prevention:**
+- Use locking/guard flags during filter execution
+- Queue incoming data instead of processing immediately
+- Avoid `process-send-string` during filter execution
+- Test with rapid-fire requests (race condition reproduction)
+
+**Detection:**
+- Intermittent bugs that disappear on retry
+- State corruption under load
+- Out-of-order responses
+- Debugger shows nested filter invocations
+
+**Phase impact:** Production hardening - only visible under concurrent use.
+
+**Sources:**
+- [Jorgen's Weblog: Race conditions in Emacs' process filter functions](http://blog.jorgenschaefer.de/2014/05/race-conditions-in-emacs-process-filter.html)
+- [A vision of a multi-threaded Emacs | Hacker News](https://news.ycombinator.com/item?id=31559818)
 
 ---
 
 ## Minor Pitfalls
 
-These cause annoyance or rough edges, but are easily fixable.
+Mistakes that cause annoyance but are easily fixable.
 
-### Pitfall 9: Poor Error Messages for Debugging
+### Pitfall 10: Forgetting special-mode Derivation
+**What goes wrong:** Manual keymap setup instead of deriving from `special-mode`. Reinvents wheel and misses standard bindings like `q` for quit-window.
 
-**What goes wrong:**
-Generic errors like "Failed to get user input" don't help users diagnose:
-- Was emacsclient not found?
-- Did the Emacs server time out?
-- Was the question malformed?
-- Did the user cancel?
+**Why it happens:** Not knowing `special-mode` exists. Documentation shows manual keymap creation examples.
+
+**Consequences:**
+- Missing standard bindings (`q`, `g`, etc.)
+- More boilerplate code
+- Inconsistent with other Emacs popups
 
 **Prevention:**
-```javascript
-catch (err) {
-  let userMessage = 'Failed to get user input.';
-  let debugInfo = err.message;
-  
-  if (err.code === 'ENOENT') {
-    userMessage = 'emacsclient command not found. Is Emacs installed?';
-  } else if (err.code === 'ETIMEDOUT') {
-    userMessage = 'Timeout waiting for user response (5 minutes).';
-  } else if (err.killed) {
-    userMessage = 'User cancelled the prompt.';
-  } else if (err.signal === 'SIGTERM') {
-    userMessage = 'Emacs server stopped responding.';
-  }
-  
-  console.error(`Error: ${userMessage} (${debugInfo})`);
-  respondError(id, -32000, userMessage);
-}
-```
+- Derive popup major mode from `special-mode`
+- Inherit `special-mode-map` automatically
+- Add only custom bindings on top
 
-**Phase mapping:**
-- **Phase 2 (Error Handling):** Improve error messages
+**Detection:**
+- `q` doesn't quit popup
+- `g` doesn't refresh (if applicable)
+- Keymap definition is long and manual
+
+**Phase impact:** Code quality - works but messy.
+
+**Sources:**
+- [23.2.5 Basic Major Modes | Emacs Docs](https://emacsdocs.org/docs/elisp/Basic-Major-Modes)
+- [Major Mode Conventions (GNU Emacs Lisp Reference Manual)](https://www.gnu.org/software/emacs/manual/html_node/elisp/Major-Mode-Conventions.html)
 
 ---
 
-### Pitfall 10: No Logging or Observability
+### Pitfall 11: Not Testing with User's display-buffer-alist
+**What goes wrong:** Popup works in clean config but breaks with user's custom `display-buffer-alist` rules.
 
-**What goes wrong:**
-When issues occur in production, there's no way to:
-- See which questions were asked
-- Track how long users took to respond
-- Identify patterns (which questions timeout, which succeed)
-- Debug protocol issues (malformed JSON-RPC)
+**Why it happens:** User may have rules that override popup's display preferences. Package assumes default Emacs behavior.
+
+**Consequences:**
+- Popup appears in wrong location for some users
+- Conflicts with popper.el or similar packages
+- Bug reports that can't reproduce in clean config
 
 **Prevention:**
-```javascript
-console.error(`[${new Date().toISOString()}] Question asked: ${question.slice(0, 100)}...`);
-const startTime = Date.now();
+- Use specific buffer name pattern unlikely to match user rules
+- Document expected display-buffer behavior
+- Test with popper.el and popwin installed
+- Allow user customization of display-buffer action
 
-// ... get answer ...
+**Detection:**
+- Works in `emacs -Q` but not user's config
+- User reports popup behavior inconsistency
+- Conflicts with window management packages
 
-const duration = Date.now() - startTime;
-console.error(`[${new Date().toISOString()}] Answer received in ${duration}ms`);
-```
+**Phase impact:** Production polish - edge case issues.
 
-Consider structured logging (JSON) for easier parsing:
-```javascript
-const log = (event, data) => {
-  console.error(JSON.stringify({ timestamp: Date.now(), event, ...data }));
-};
+**Sources:**
+- [GitHub - karthink/popper: Emacs minor-mode to summon and dismiss buffers easily](https://github.com/karthink/popper)
+- [:ui popup - Doom Emacs v21.12 documentation](https://docs.doomemacs.org/v21.12/modules/ui/popup/)
 
-log('question_asked', { question, length: question.length });
-log('answer_received', { duration, answerLength: answer.length });
-```
+---
 
-**Phase mapping:**
-- **Phase 3 (Production Hardening):** Add structured logging
+### Pitfall 12: Buffer Name Collisions
+**What goes wrong:** Multiple concurrent popups share buffer name, causing display/state confusion.
+
+**Why it happens:** Using static buffer name like `*ask-user*` without unique identifier. Second popup reuses existing buffer.
+
+**Consequences:**
+- First popup's content replaced by second
+- Both emacsclient callers get same buffer
+- State corruption when multiple requests in flight
+
+**Prevention:**
+- Use `generate-new-buffer` for unique names
+- Or include request ID in buffer name: `*ask-user-<uuid>*`
+- Store buffer reference in request context
+- Clean up by buffer object, not by name lookup
+
+**Detection:**
+- Popup content changes unexpectedly
+- Multiple MCP requests interfere with each other
+- Buffer list shows only one popup despite multiple active requests
+
+**Phase impact:** Concurrent request support - likely post-MVP.
+
+**Sources:**
+- [Current Buffer (GNU Emacs Lisp Reference Manual)](https://www.gnu.org/software/emacs/manual/html_node/elisp/Current-Buffer.html)
 
 ---
 
 ## Phase-Specific Warnings
 
-**Phase 1: Core MCP Server**
-- **Pitfall 1:** Must use `spawn()` with arg arrays (CRITICAL)
-- **Pitfall 3:** Stdout hygiene from day one (CRITICAL)
-- **Pitfall 8:** Use async spawn, not execSync (MODERATE)
+**Phase: Core Implementation (MVP)**
+- Pitfall 1 (emacsclient return escaping) - MUST resolve for MCP integration
+- Pitfall 2 (blocking/server-edit) - MUST resolve for basic functionality
+- Pitfall 3 (keymap hierarchy) - MUST resolve for navigation
+- Pitfall 7 (read-only violations) - MUST resolve for option rendering
 
-**Phase 2: Error Handling & Validation**
-- **Pitfall 2:** Signal handlers and process cleanup (CRITICAL)
-- **Pitfall 4:** Progress notifications for long waits (CRITICAL)
-- **Pitfall 5:** emacsclient health checks and fallback (CRITICAL)
-- **Pitfall 7:** Input validation and length limits (MODERATE)
-- **Pitfall 9:** Better error messages (MINOR)
+**Phase: UX Refinement**
+- Pitfall 5 (display-buffer bypass) - Should fix for bottom-placement
+- Pitfall 6 (focus stealing) - Should fix for smooth UX
+- Pitfall 8 (quit-window semantics) - Should fix for proper cleanup
 
-**Phase 3: Production Hardening**
-- **Pitfall 2:** Process monitoring and PID tracking (CRITICAL continuation)
-- **Pitfall 10:** Structured logging for observability (MINOR)
+**Phase: Production Hardening**
+- Pitfall 4 (buffer cleanup races) - Must fix for long-running sessions
+- Pitfall 9 (process filter races) - Must fix for concurrent requests
+- Pitfall 11 (user config compatibility) - Should test thoroughly
 
-**Phase X: Future Enhancements (Auth, Multi-user)**
-- **Pitfall 6:** Secret management before adding credentials (MODERATE)
-
----
-
-## Summary: Top 3 to Address Immediately
-
-1. **Command Injection (Pitfall 1):** Use `spawn()` with argument arrays, never `exec()` with string interpolation. This is a CRITICAL security vulnerability.
-
-2. **Process Cleanup (Pitfall 2):** Register signal handlers and track child processes. Zombie accumulation causes PID exhaustion in production.
-
-3. **Stdio Hygiene (Pitfall 3):** Never write to stdout except JSON-RPC responses. Use stderr for all debugging to prevent protocol corruption.
-
-These three pitfalls are architectural decisions that are hard to fix later. Get them right in Phase 1.
+**Phase: Concurrent Support (if needed)**
+- Pitfall 12 (buffer name collisions) - MUST resolve for multiple simultaneous popups
 
 ---
 
-## Research Confidence
+## Quick Reference Checklist
 
-**Overall confidence:** HIGH
+**Before submitting MVP:**
+- [ ] emacsclient output tested (Pitfall 1)
+- [ ] server-edit called on all code paths (Pitfall 2)
+- [ ] C-n/C-p navigation working (Pitfall 3)
+- [ ] Buffer cleanup verified (no leaks) (Pitfall 4)
+- [ ] Read-only buffer allows programmatic updates (Pitfall 7)
 
-**By area:**
-- **Command Injection:** HIGH - Official Node.js docs, Auth0 security guide, multiple CVEs
-- **Process Management:** HIGH - Node.js docs, real-world Cloud Foundry issues documented
-- **Stdio/JSON-RPC:** HIGH - MCP spec, foojay technical deep-dive
-- **Timeout Handling:** HIGH - MCP spec updates (2025-11-25), SEP-1391 proposal
-- **emacsclient Failures:** MEDIUM - GNU Emacs docs, community forum issues (not all failure modes may be documented)
+**Before production release:**
+- [ ] Popup appears at bottom consistently (Pitfall 5)
+- [ ] Focus remains in user's buffer (Pitfall 6)
+- [ ] Window cleanup tested (Pitfall 8)
+- [ ] Tested with popper.el and custom display-buffer-alist (Pitfall 11)
+- [ ] Process filter locking if applicable (Pitfall 9)
 
-**Sources used:**
-- Official MCP specification (2025-11-25 revision)
-- Node.js documentation (v25.3.0)
-- GNU Emacs manual and community forums
-- Security research reports (Astrix, Trend Micro, Auth0)
-- Real-world CVEs and incident reports (2025-2026)
+**Code quality improvements:**
+- [ ] Derived from special-mode (Pitfall 10)
+- [ ] Unique buffer names for concurrent support (Pitfall 12)
 
-All findings cross-verified with multiple authoritative sources.
+---
+
+## Confidence Assessment
+
+**HIGH confidence:**
+- Keymap hierarchy issues (well-documented in Emacs manual)
+- display-buffer behavior (official documentation)
+- server-edit blocking requirements (official documentation)
+
+**MEDIUM confidence:**
+- emacsclient output escaping (GitHub issues and third-party tools confirm)
+- Process filter race conditions (blog post + multiple GitHub issues)
+- Buffer cleanup patterns (official manual + 2025 bug report)
+
+**LOW confidence:**
+- Specific interaction with popper.el (limited 2025 documentation)
+- MCP-specific edge cases (novel integration, limited prior art)
+
+**Verification needed:**
+- Test emacsclient blocking with actual MCP server integration
+- Verify read-only buffer modification patterns in practice
+- Confirm process filter races don't affect stdio-based MCP communication

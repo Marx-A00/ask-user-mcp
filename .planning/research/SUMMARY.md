@@ -1,351 +1,278 @@
 # Project Research Summary
 
-**Project:** ask-user-mcp
-**Domain:** Interactive user-prompting MCP tool server with Emacs integration
-**Researched:** 2026-01-26
+**Project:** AskUserQuestion MCP Server v2
+**Domain:** Emacs popup buffer UI with MCP integration
+**Researched:** 2026-02-08
 **Confidence:** HIGH
 
 ## Executive Summary
 
-MCP servers are lightweight protocol adapters that expose tools to AI agents via JSON-RPC 2.0 over stdio/HTTP transports. For interactive user prompting servers like ask-user-mcp, the technical landscape is well-defined but the feature expectations are still emerging. Multiple similar implementations exist (Human-In-the-Loop MCP, user-prompt-mcp, Interactive MCP) but none dominate as the standard approach.
+This project replaces minibuffer prompts with a popup buffer UI for Claude's question-answer flow. Research reveals this requires building a custom popup buffer (~64 lines of elisp) using native Emacs primitives rather than heavyweight completion frameworks. The recommended approach uses `display-buffer-at-bottom` for positioning, overlays for visual highlighting, and `recursive-edit` for blocking emacsclient synchronously. This matches the existing integration pattern with minimal changes to the Node.js MCP server.
 
-The recommended stack centers on the official TypeScript SDK v1.25.2 with Node.js 24 LTS, using stdio transport for local process communication. The architecture follows a simple layered pattern: SDK core handles protocol mechanics, transport adapter manages stdio serialization, tool handlers contain business logic, and external integrations (emacsclient) execute actions. This is a greenfield opportunity to differentiate through Emacs integration with styled prompts, where competitors use generic UIs.
+The critical insight is that vertico/helm/ivy are the wrong tools — they're minibuffer completion frameworks, not popup buffer builders. A custom implementation provides full control, zero dependencies, and simpler integration. The architecture maintains the current synchronous blocking pattern where emacsclient waits for user input, requiring careful use of `recursive-edit` and proper `server-edit` cleanup.
 
-**Critical risks:** Command injection (user questions passed unsanitized to shell), zombie process accumulation (emacsclient not cleaned up), and stdio deadlock (mixing debug output with JSON-RPC). All three are architectural decisions that must be correct from Phase 1, as retrofitting is expensive. Prevention requires spawn() with argument arrays (never exec with strings), comprehensive signal handlers, and redirecting all logs to stderr.
+The main risks are emacsclient blocking failures and keymap hierarchy conflicts. Both are mitigated by following established Emacs patterns: derive from `special-mode` for keymaps, use `unwind-protect` for cleanup, and test `server-edit` call paths thoroughly. The MVP should focus on popup positioning, C-n/C-p navigation, and clean buffer lifecycle before adding enhancements.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The modern MCP server stack is remarkably standardized around the official TypeScript SDK and proven Node.js tooling. No framework complexity—just protocol handling, schema validation, and subprocess management.
+Build directly on Emacs primitives rather than external frameworks. Total implementation: ~64 lines of elisp with zero dependencies.
 
 **Core technologies:**
+- **`display-buffer-at-bottom`** (built-in): Position popup at frame bottom with 40% height, matches popper-style behavior
+- **Overlays** (`make-overlay`, `move-overlay`): Highlight selected option during C-n/C-p navigation without modifying buffer text
+- **`recursive-edit`** (built-in): Block emacsclient execution until user responds, maintaining synchronous contract with MCP server
+- **`special-mode`** (built-in): Base major mode providing read-mostly buffer behavior and standard keybindings like `q` for quit
+- **Buffer-local variables** (`defvar-local`): Store user response scoped to popup buffer, avoiding global state races
 
-- **@modelcontextprotocol/sdk v1.25.2**: Official MCP implementation with full spec compliance (2025-11-25). Maintained by Anthropic, used by 21,227+ projects. Provides server lifecycle, capability negotiation, and message routing.
+**Why not frameworks:** Vertico/helm/ivy are designed for minibuffer completion workflows and rely on `completing-read`. They cannot easily be adapted to custom popup buffers. Custom implementation is simpler, has no dependencies, and matches the project's direct `emacsclient` integration pattern.
 
-- **Node.js 24 LTS (Krypton)**: Current LTS with native Web Crypto API (SDK requirement). Long-term support through April 2028. No experimental flags needed.
-
-- **TypeScript 5.7+ with NodeNext modules**: Modern ESM support with strict type checking. Use tsx for zero-config development (10x faster than ts-node, used by official MCP examples).
-
-- **pnpm 9.x**: Package manager with 70% disk savings vs npm/yarn, strict dependency management prevents bugs. Official MCP SDK repository uses pnpm.
-
-- **Vitest 3.x**: Testing framework 10-20x faster than Jest with zero-config TypeScript support. Drop-in Jest replacement with 95% API compatibility.
-
-- **Zod 3.25+**: Schema validation (required peer dependency for SDK). Validates tool inputs at runtime and generates TypeScript types.
-
-- **stdio transport (built-in SDK)**: Local process communication with microsecond latency, zero network overhead, no authentication needed. Standard for Claude Desktop, Cursor, agent-shell integrations.
-
-**Critical version notes:**
-- SDK v1.x is production-ready (v2 expected Q1 2026 with breaking changes)
-- Node.js 24 LTS avoids Web Crypto polyfill needs (required by older versions)
-- Never write to stdout when using stdio transport—corrupts JSON-RPC stream
+**Integration point:** Add `options` parameter to existing `mr-x/ask-user-question` function. If options provided, use `mr-x/popup-select`; otherwise use `mr-x/popup-free-text`. TypeScript side unchanged — same emacsclient spawning pattern.
 
 ### Expected Features
 
-Interactive user-prompting servers sit in a gray area between tool-providing servers (well-defined expectations) and novel interaction patterns (no established standards). The protocol itself is table stakes; most "features" are implementation quality concerns.
-
 **Must have (table stakes):**
+- **C-n/C-p navigation** — Universal Emacs standard for list navigation, also support arrow keys
+- **Visual highlight of current selection** — Users need clear feedback on what they're selecting
+- **RET selects, C-g cancels** — Standard Emacs confirmation/cancel gestures
+- **Bottom-of-frame positioning** — Consistent with compilation buffers, REPLs, popper.el
+- **Automatic cleanup on exit** — Popup shouldn't linger in buffer list after selection
+- **Free-text input mode** — Not all questions have predefined options
 
-- JSON-RPC 2.0 protocol with capability negotiation (MCP spec requirement)
-- Single AskUserQuestion tool declaration with input schema
-- Synchronous blocking until user responds
-- Input validation against declared schema
-- Error responses (not crashes) for malformed input
-- 5-minute timeout to prevent indefinite hangs
-- No stdout pollution (STDIO transport requirement—all logs to stderr)
+**Should have (competitive):**
+- **Number keys (1-9) for quick select** — Efficient for short lists, company-mode pattern
+- **M-n/M-p as navigation alternatives** — Matches completion frameworks, provides binding flexibility
+- **Home/End jump to first/last** — Fast navigation for longer option lists
+- **Clear mode indication** — User must know if selecting vs typing
 
-**Should have (competitive differentiation):**
-
-- Rich prompt styling in Emacs (project's core differentiator vs generic UI implementations)
-- Configurable timeout per tool call
-- Graceful timeout UX with helpful error messages
-- Response validation with retry loop
-- Progress notifications for long waits (prevents client timeout)
-
-**Defer (v2+ features):**
-
-- Multiple response types (choice, confirmation, multi-line)
-- Response history audit trail
-- Multi-turn clarification (requires protocol extensions)
-- Authentication for multi-user environments
-- HTTP transport (unnecessary for local-only use case)
-- Multiple tools (single-tool simplicity is advantage)
-- Persistent state (introduces race conditions)
-
-**Anti-features to avoid:**
-Default answers (defeats purpose), caching responses (context-dependent questions), async/background prompts (violates synchronous tool model), GUI windows outside Emacs (breaks workflow), complex configuration (YAGNI for single-tool server).
+**Defer (v2+):**
+- **Incremental filtering** — Substantial complexity, may conflict with free-text mode, uncommon for Q&A
+- **Popper.el integration** — Can start with basic display-buffer, add later if users request
+- **Page scrolling (C-v/M-v)** — Only needed for very long lists (>10 items), uncommon in Q&A context
+- **Evil mode compatibility** — Detect evil-mode and add j/k bindings if users report issues
 
 ### Architecture Approach
 
-MCP servers using the official SDK follow a straightforward layered architecture with clear separation between protocol handling, business logic, and external integrations.
+The architecture maintains the existing synchronous blocking pattern where emacsclient spawns, evaluates elisp, and blocks until return value is available. The popup UI is entirely elisp-side; Node.js only changes which function it calls.
 
 **Major components:**
+1. **Popup Display Manager** — Creates buffer, positions at bottom with `display-buffer-at-bottom`, manages window lifecycle
+2. **Navigation Handler** — Implements C-n/C-p keybindings with overlay highlighting, derives from `special-mode` for keymap precedence
+3. **Blocking Controller** — Uses `recursive-edit` to block emacsclient, captures user response in buffer-local variable, calls `server-edit` on completion
+4. **Cleanup Coordinator** — Uses `unwind-protect` to guarantee buffer/window cleanup even on C-g abort
 
-1. **McpServer (SDK core)**: Manages server lifecycle, registers capabilities (tools/resources/prompts), routes JSON-RPC messages to handlers. No customization needed—SDK provides complete implementation.
+**Data flow:** Node.js → emacsclient spawn → elisp evaluation → recursive-edit (blocks) → user interaction → exit-recursive-edit → return string → stdout → Node.js promise resolves
 
-2. **StdioServerTransport**: Handles stdin/stdout I/O, JSON-RPC serialization/deserialization, message framing. Spawned as child process by host, automatically cleaned up on connection close.
-
-3. **Tool handler (askUser.ts)**: Validates input with Zod schema, spawns emacsclient subprocess with timeout, parses response, returns structured CallToolResult. Contains all business logic.
-
-4. **Emacsclient integration utility**: Wrapper around Node.js child_process.spawn() with proper argument arrays (prevents injection), timeout enforcement, signal handlers, and error classification.
-
-**Data flow:**
-Claude requests tool → JSON-RPC via stdio → SDK deserializes → validates against Zod schema → invokes tool handler → spawns emacsclient → Emacs prompts user → answer returned → handler formats response → SDK serializes → stdout back to Claude.
-
-**Build order rationale:**
-Foundation (package.json, tsconfig) → Transport/server init (validates protocol handshake) → Emacsclient utility (testable in isolation) → Tool handler (combines utility + MCP) → Tool registration (completes protocol) → Emacs integration (end-to-end) → Polish (timeouts, errors). This order enables incremental validation at each layer.
+**Critical contract:** Elisp function MUST be synchronous from emacsclient's perspective. It must not return until user completes interaction. This is achieved via `recursive-edit`, not async callbacks or hooks.
 
 ### Critical Pitfalls
 
-**1. Command injection via unsanitized input**
-Using exec() or execSync() with string interpolation allows shell metacharacters in questions to execute arbitrary commands. Example: question `"; rm -rf / #"` could wipe filesystem. Prevention: Use spawn() with argument arrays (bypasses shell entirely), never build command strings. **CRITICAL security vulnerability—must be correct in Phase 1.**
+1. **emacsclient blocking without proper server-edit** — If popup doesn't call `server-edit` on all exit paths, emacsclient hangs indefinitely. Prevention: Always call `server-edit` on completion, `server-edit-abort` on cancellation, bind cleanup to `kill-buffer-hook` as failsafe. Test timeout behavior explicitly.
 
-**2. Zombie and orphan process accumulation**
-Child processes (emacsclient) accumulate if not cleaned up on timeouts, crashes, or signals. Causes PID exhaustion (max 32768 on Linux), memory leaks, container eviction. Prevention: Track all children in Set, register exit handlers, add signal handlers (SIGINT, SIGTERM), kill children with SIGTERM on shutdown. **CRITICAL resource leak—requires Phase 1 architecture.**
+2. **Keymap override hierarchy confusion** — C-n/C-p bindings don't work because other keymaps take precedence. Prevention: Derive from `special-mode` which suppresses insert keys, test with common minor modes active (company, flycheck), use `suppress-keymap` to disable insertion.
 
-**3. Stdio deadlock and buffer overflow**
-Writing to stdout corrupts JSON-RPC stream (protocol breaks silently). Large responses exceed maxBuffer (default 200KB) and kill child process. Prevention: Override console.log to stderr, set maxBuffer to 1MB+, handle partial JSON-RPC messages with line buffering. **CRITICAL protocol issue—breaks all communication.**
+3. **Buffer cleanup race conditions** — Popup buffer isn't cleaned up properly, either leaking (never killed) or killed too early (while emacsclient waiting). Prevention: Use `quit-window` with KILL parameter for atomic cleanup, ensure `server-edit` runs BEFORE `kill-buffer`, add cleanup to `kill-buffer-hook` as failsafe.
 
-**4. Client timeout before server timeout**
-Server waits 5 minutes for user, but client times out in 60 seconds and drops connection. User's answer arrives after connection is dead. Prevention: Send progress notifications every 5 seconds during wait (MCP 2025-11-25 spec feature), coordinate timeout values with client config. **Degraded UX—Phase 2 priority.**
+4. **emacsclient return value escaping** — `emacsclient --eval` automatically quotes string results, breaking shell parsing. A function returning `"hello"` becomes `"\"hello\""` on stdout. Prevention: Test emacsclient output format early, consider using `prin1-to-string` for controlled formatting.
 
-**5. emacsclient failure modes not handled**
-Server crashes when Emacs server isn't running (server-start not called), socket file missing, systemd conflicts, or display variables wrong (Wayland vs X11). Prevention: Startup health check (test emacsclient before accepting connections), classify error modes (ENOENT, ETIMEDOUT, socket errors), provide fallback mechanism (file-based I/O). **Reliability issue—Phase 2 hardening.**
-
-**Additional concerns:**
-Input validation (prevent 10MB questions, control characters), synchronous operations blocking event loop (use async spawn), poor error messages (classify and explain failures), no observability (structured logging for debugging).
+5. **display-buffer-alist bypass** — Using `switch-to-buffer` instead of `display-buffer` bypasses user's window management rules. Popup appears in wrong location. Prevention: ALWAYS use `display-buffer` or `pop-to-buffer` with explicit action list specifying `display-buffer-at-bottom`.
 
 ## Implications for Roadmap
 
-Based on research, recommend 3-phase structure prioritizing security and protocol correctness, then reliability and UX, finally production hardening.
+Based on research, suggested phase structure:
 
-### Phase 1: Core MCP Server + Basic Integration
+### Phase 1: Core Popup Infrastructure
+**Rationale:** Foundation for all UI work. Must establish blocking pattern and cleanup before adding features. Elisp-first approach allows independent testing before MCP integration.
 
-**Rationale:** Establish protocol compliance and security foundation. These decisions (spawn vs exec, stdout hygiene, async patterns) are architectural and expensive to retrofit. Validate end-to-end flow before adding sophistication.
+**Delivers:** Working popup buffer with basic rendering, proper lifecycle, and return value propagation
 
-**Delivers:**
-- Working MCP server with stdio transport
-- Single AskUserQuestion tool declaration
-- Secure emacsclient spawning (spawn with arg arrays, no injection)
-- Basic error handling (catch and return errors, don't crash)
-- 5-minute hardcoded timeout
-- Input validation (type, length, UTF-8)
+**Key tasks:**
+- Implement major mode derived from `special-mode`
+- Create popup display function with `display-buffer-at-bottom`
+- Integrate `recursive-edit` for blocking behavior
+- Implement buffer-local result storage
+- Add cleanup with `unwind-protect`
+- Test emacsclient blocking and return values
 
-**Implements (from ARCHITECTURE.md):**
-- McpServer setup with StdioServerTransport
-- Tool registration with Zod schema
-- Emacsclient utility with spawn() and argument arrays
-- Basic process cleanup (exit event handlers)
+**Addresses features:**
+- Bottom-of-frame positioning
+- Automatic cleanup on exit
+- Read-only buffer content (except in free-text mode)
 
-**Avoids (from PITFALLS.md):**
-- Pitfall 1: Command injection (use spawn, never exec)
-- Pitfall 3: Stdout pollution (logs to stderr only)
-- Pitfall 8: Event loop blocking (async spawn, not execSync)
+**Avoids pitfalls:**
+- Pitfall 2: server-edit integration from start
+- Pitfall 3: special-mode derivation for keymap precedence
+- Pitfall 4: unwind-protect for guaranteed cleanup
 
-**Uses (from STACK.md):**
-- @modelcontextprotocol/sdk 1.25.2
-- Node.js 24 LTS with native Web Crypto
-- TypeScript 5.7+ with NodeNext modules
-- tsx for development execution
-- Zod 3.25+ for input validation
+**Research needed:** None — patterns well-documented in GNU Emacs manual
 
-**Success criteria:** Can ask question via Claude → appears in Emacs → answer flows back → structured response returned. Server doesn't crash on errors.
+### Phase 2: Selection Navigation
+**Rationale:** Core UX differentiator from v1. Depends on Phase 1 infrastructure for display and lifecycle.
 
-### Phase 2: Error Handling & Reliability
+**Delivers:** C-n/C-p navigation with visual highlighting, RET to select, C-g to cancel
 
-**Rationale:** Users encounter real-world failure modes (Emacs not running, timeouts, wrong sockets). Without graceful degradation, server appears broken. Progress notifications prevent client timeouts.
+**Key tasks:**
+- Create overlay for selection highlighting
+- Implement C-n/C-p keybindings that move overlay
+- Add RET handler to capture selected line
+- Add C-g handler to cancel with empty result
+- Test keymap precedence with common minor modes
+- Handle edge cases (first/last option wrapping)
 
-**Delivers:**
-- Signal handlers (SIGINT, SIGTERM) with child cleanup
-- Progress notifications (5-second heartbeat during user wait)
-- Emacsclient health check at startup
-- Classified error messages (ENOENT, ETIMEDOUT, socket errors)
-- Response validation (retry loop for invalid formats)
-- Graceful timeout UX (explain why timeout occurred)
+**Addresses features:**
+- C-n/C-p navigation
+- Visual highlight of current selection
+- RET selects, C-g cancels
+- First item selected by default
 
-**Addresses (from FEATURES.md):**
-- Progress notifications (competitive differentiator)
-- Graceful timeout UX
-- Response validation
+**Avoids pitfalls:**
+- Pitfall 3: Tested with company-mode, flycheck active
+- Pitfall 7: Use `inhibit-read-only` for overlay updates
 
-**Avoids (from PITFALLS.md):**
-- Pitfall 2: Zombie processes (comprehensive signal handlers)
-- Pitfall 4: Client timeout (progress notifications)
-- Pitfall 5: emacsclient failures (health checks, fallback)
-- Pitfall 7: Input validation gaps (length limits, control chars)
-- Pitfall 9: Poor error messages (classify and explain)
+**Research needed:** None — overlay patterns standard, hl-line-mode provides reference
 
-**Success criteria:** Server handles Emacs server down, user timeout, signal interrupts gracefully. Client doesn't timeout waiting for user. Errors are actionable.
+### Phase 3: Free-Text Input Mode
+**Rationale:** Required for open-ended questions. Reuses Phase 1 infrastructure but makes buffer editable. Independent of Phase 2 (different interaction mode).
 
-### Phase 3: Emacs UX & Production Hardening
+**Delivers:** Editable prompt area for user to type multi-line responses
 
-**Rationale:** Core functionality proven, now optimize UX and observability. Styled prompts are the project's key differentiator. Logging enables production debugging.
+**Key tasks:**
+- Add mode-switching logic (options vs free-text)
+- Render editable input area below question
+- Use standard editing keybindings (C-a/C-e, C-k, etc.)
+- Capture full buffer content on submit
+- Add clear mode indication in mode-line or prompt
 
-**Delivers:**
-- Custom elisp for styled Emacs prompts (project differentiator)
-- Structured logging (JSON to stderr)
-- Process tracking and PID monitoring
-- Configurable timeout (tool parameter)
-- Documentation (README, setup guide, troubleshooting)
+**Addresses features:**
+- Free-text input mode
+- Clear mode indication
+- Status information (mode-line)
 
-**Addresses (from FEATURES.md):**
-- Rich prompt styling (core differentiator vs competitors)
+**Avoids pitfalls:**
+- Pitfall 7: Make buffer editable in correct region only
+- Pitfall 8: Same quit-window cleanup as selection mode
 
-**Avoids (from PITFALLS.md):**
-- Pitfall 2: PID exhaustion monitoring (production hardening)
-- Pitfall 10: No observability (structured logging)
+**Research needed:** None — editable buffer regions standard pattern
 
-**Success criteria:** Prompts use Emacs styling, logs are parseable JSON, monitoring alerts on PID issues, docs enable self-service setup.
+### Phase 4: MCP Integration
+**Rationale:** Connects working popup to MCP server. Kept separate to allow elisp testing in isolation first.
+
+**Delivers:** MCP server calls popup instead of minibuffer, full error handling
+
+**Key tasks:**
+- Add `options` parameter to existing elisp function
+- Update emacsclient call in TypeScript to use new function
+- Add condition-case fallback to minibuffer if popup fails
+- Test timeout behavior (Node.js kills process)
+- Test error propagation (elisp errors → Node.js)
+- Verify return value escaping
+
+**Addresses features:**
+- Mode switching (selection vs free-text)
+
+**Avoids pitfalls:**
+- Pitfall 1: Test return value escaping early
+- Pitfall 2: Verify server-edit on all code paths
+- Pitfall 4: Test cleanup under timeout conditions
+
+**Research needed:** None — existing integration pattern well-understood
+
+### Phase 5: Enhanced Navigation (Optional)
+**Rationale:** Polish features that improve UX but aren't blockers. Can be deferred post-MVP if time constrained.
+
+**Delivers:** Number key quick-select, M-n/M-p alternatives, Home/End jumps
+
+**Key tasks:**
+- Add 1-9 keybindings for instant selection
+- Add M-n/M-p as navigation alternatives
+- Add Home/End to jump to first/last option
+- Consider C-v/M-v page scrolling if lists commonly >10 items
+- Add contextual help (C-h m shows keybindings)
+
+**Addresses features:**
+- Number keys for quick select
+- M-n/M-p alternatives
+- Home/End jump navigation
+- Contextual help
+
+**Research needed:** None — standard keybinding patterns
 
 ### Phase Ordering Rationale
 
-**Why Phase 1 first:**
-Security and protocol correctness are architectural foundations. Command injection, stdout pollution, and event loop blocking require specific implementation patterns (spawn with args, stderr logging, async operations) that are expensive to change later. Validating basic end-to-end flow before adding complexity reduces rework risk.
+- **Phase 1 first:** All other work depends on popup infrastructure and blocking pattern. Elisp-first approach enables independent testing.
+- **Phase 2 before Phase 4:** Navigation must work before integrating with MCP, otherwise hard to test integration issues vs navigation bugs.
+- **Phase 3 parallel to Phase 2:** Free-text mode is independent of selection navigation, can be developed in parallel if resources allow.
+- **Phase 4 after Phases 1-3:** Integration comes last because elisp must be working before connecting to MCP server.
+- **Phase 5 deferred:** Enhanced navigation is polish, not required for MVP functionality.
 
-**Why Phase 2 before Phase 3:**
-Reliability issues (zombie processes, timeouts, emacsclient failures) block real-world usage and cause "works on my machine" debugging sessions. Progress notifications prevent client-side timeout issues that would otherwise require protocol changes. Error handling must be solid before optimizing UX.
-
-**Why Phase 3 last:**
-Styled prompts and logging are polish—valuable but not blocking. Once core reliability is proven, these enhancements have clear requirements (what to log, what errors occur) and lower rework risk. Production hardening needs data from real usage.
-
-**Dependency chain:**
-- Phase 2 depends on Phase 1 (can't handle emacsclient errors before emacsclient integration exists)
-- Phase 3 depends on Phase 2 (styling enhances working prompts, logging requires error classification)
-- Emacs integration in Phase 3 validates end-to-end flow that was protocol-tested in Phase 1
+**Critical path:** Phase 1 → Phase 2 → Phase 4 (Phases 3 and 5 can be deferred if needed)
 
 ### Research Flags
 
-**Phases needing deeper research during planning:**
+Phases with standard patterns (skip research-phase):
+- **Phase 1:** Popup buffer creation, recursive-edit, cleanup — all well-documented in GNU Emacs manual
+- **Phase 2:** Overlay highlighting, keymap bindings — hl-line-mode provides reference implementation
+- **Phase 3:** Editable buffer regions — standard pattern for org-capture, magit commit buffers
+- **Phase 4:** emacsclient integration — existing v1 implementation provides template
+- **Phase 5:** Keybinding additions — straightforward extension of Phase 2
 
-- **Phase 3 (Emacs Styling):** Elisp patterns for styled minibuffer prompts are niche. May need Emacs-specific research for read-string customization, face properties, agent-shell integration. FEATURES.md notes custom elisp is in v1 scope but implementation patterns not fully documented.
-
-**Phases with standard patterns (skip research-phase):**
-
-- **Phase 1 (Core MCP Server):** Well-documented SDK patterns. Reference implementations (official filesystem server) demonstrate tool declaration, stdio transport, Zod validation. High confidence.
-
-- **Phase 2 (Error Handling):** Standard Node.js child process management. Signal handlers, timeout strategies, and error classification are well-established patterns. Sources verified from Node.js docs and production experience.
-
-**Confidence rationale:**
-STACK.md and ARCHITECTURE.md show HIGH confidence (official docs, reference implementations). FEATURES.md shows HIGH confidence on protocol requirements but MEDIUM on interactive prompting patterns (emerging niche). PITFALLS.md shows HIGH confidence on technical pitfalls (verified CVEs, official security research) but MEDIUM on emacsclient-specific failure modes (community forums, not exhaustive).
+**No phases need deeper research.** All patterns are established and well-documented. Research was front-loaded into this document.
 
 ## Confidence Assessment
 
-**Stack:** HIGH
-- Official SDK documentation verified (v1.25.2 current stable)
-- Node.js LTS versions confirmed (24.x current, support through 2028)
-- Tooling comparisons based on benchmarks (tsx vs ts-node, Vitest vs Jest, pnpm vs npm)
-- All version numbers checked against npm registry and GitHub releases
+**Area: Stack**
+- Confidence: HIGH
+- Notes: All technologies are built-in Emacs primitives with official GNU documentation. No external dependencies or version compatibility issues.
 
-**Features:** HIGH
-- MCP protocol requirements verified from official spec (2025-11-25 revision)
-- Tool-providing server expectations confirmed via reference implementations
-- Interactive prompting servers compared (4 existing implementations analyzed)
-- Table stakes vs differentiators validated against competitor features
+**Area: Features**
+- Confidence: HIGH
+- Notes: Feature expectations verified against established completion UIs (vertico, company-mode) and popup buffer patterns (popper.el, org-capture). Table stakes clear from community consensus.
 
-**Architecture:** HIGH
-- Component boundaries documented in official SDK (McpServer, Transport, handlers)
-- Data flow verified from MCP specification and TypeScript SDK source
-- Build order derived from dependency analysis and reference server structure
-- Patterns validated against official examples (filesystem server, SQLite server)
+**Area: Architecture**
+- Confidence: HIGH
+- Notes: Architecture verified against official recursive-edit documentation and existing patterns in org-capture, magit. Blocking pattern is well-understood.
 
-**Pitfalls:** HIGH (technical) / MEDIUM (emacsclient-specific)
-- Command injection, zombie processes, stdio deadlock verified from Node.js docs and CVEs
-- Timeout handling confirmed from MCP spec updates (progress notifications in 2025-11-25)
-- Security issues validated from recent research (Astrix 2025 report, Trend Micro findings)
-- emacsclient failure modes based on GNU Emacs docs and community reports (not exhaustive)
+**Area: Pitfalls**
+- Confidence: MEDIUM
+- Notes: Critical pitfalls verified through official documentation and GitHub issues. Process filter races may not apply (stdio-based, not async filters). emacsclient escaping needs practical testing.
 
 **Overall confidence:** HIGH
 
-Research is comprehensive enough to proceed with roadmap creation. Known gaps (emacsclient edge cases, Emacs styling patterns) can be addressed during phase planning via targeted research.
-
 ### Gaps to Address
 
-**Emacsclient timeout edge cases:**
-Research documents timeout strategy (300000ms, spawn timeout option) but not handling of edge cases: What if emacsclient hangs after accepting command? What if socket exists but server is zombie? These require validation during Phase 2 implementation—plan time for experimentation and fallback mechanism design.
+**Practical testing gaps:**
+- emacsclient return value escaping needs verification in actual integration (Pitfall 1) — Test early in Phase 4
+- Behavior under rapid concurrent requests not fully researched (Pitfall 12) — Document as known limitation, test if users report issues
+- Interaction with user's custom display-buffer-alist rules (Pitfall 11) — Can't predict all user configs, document expected behavior
 
-**Emacs styling patterns:**
-FEATURES.md identifies rich prompt styling as v1 scope and key differentiator, but ARCHITECTURE.md doesn't detail elisp implementation patterns. Gap: How to customize read-string appearance, what face properties work in minibuffer, how to integrate with agent-shell existing styles. Requires Phase 3 research-phase or prototype experimentation.
+**Handling strategy:**
+- Test emacsclient output format in first Phase 4 task
+- Document buffer name collision limitation (unlikely for single-user tool)
+- Provide user customization hooks for display-buffer action if needed
 
-**Agent-shell integration specifics:**
-Research references agent-shell as deployment target but doesn't document its MCP configuration format, timeout settings, or Emacs integration requirements. Gap: May need agent-shell documentation review before Phase 3 to ensure styling compatibility and config correctness. Low risk—likely standard MCP client config.
-
-**Progress notification client support:**
-Phase 2 recommends progress notifications (MCP 2025-11-25 feature) but doesn't confirm agent-shell client support. Gap: Verify client implements notifications/progress before investing development time. If unsupported, fallback is just accepting client timeout behavior (degrades UX but doesn't block functionality).
-
-**Production monitoring strategy:**
-PITFALLS.md identifies PID exhaustion risk and recommends monitoring, but doesn't specify thresholds, alerting tools, or metrics collection patterns. Gap: Production deployment needs observability design—consider this in Phase 3 or defer to post-MVP operations work.
-
-**How to handle during planning:**
-- Emacsclient edge cases: Budget extra time in Phase 2 for experimentation, design fallback mechanism (file-based I/O)
-- Emacs styling: Use `/gsd:research-phase` at start of Phase 3 to research elisp patterns and agent-shell integration
-- Agent-shell config: Review agent-shell docs during Phase 3 planning (1-2 hour task, low complexity)
-- Progress notifications: Quick validation at start of Phase 2 (test client support with minimal prototype)
-- Production monitoring: Defer to post-MVP unless deploying to multi-user environment
+**No research blockers.** All gaps are testing validation, not architectural unknowns.
 
 ## Sources
 
-### Primary Sources (HIGH confidence)
+### Primary (HIGH confidence)
+- [GNU Emacs Lisp Reference Manual - Recursive Editing](https://www.gnu.org/software/emacs/manual/html_node/elisp/Recursive-Editing.html)
+- [GNU Emacs Lisp Reference Manual - Overlays](https://www.gnu.org/software/emacs/manual/html_node/elisp/Overlays.html)
+- [GNU Emacs Lisp Reference Manual - Buffer Display Action Alists](https://www.gnu.org/software/emacs/manual/html_node/elisp/Buffer-Display-Action-Alists.html)
+- [GNU Emacs Lisp Reference Manual - Quitting Windows](https://www.gnu.org/software/emacs/manual/html_node/elisp/Quitting-Windows.html)
+- [GNU Emacs Lisp Reference Manual - Derived Modes](https://www.gnu.org/software/emacs/manual/html_node/elisp/Derived-Modes.html)
 
-**MCP Specification & SDK:**
-- [MCP Specification 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25) — Protocol architecture, transport layers, capability negotiation
-- [TypeScript SDK v1.25.2](https://github.com/modelcontextprotocol/typescript-sdk) — Official implementation, server patterns, reference examples
-- [MCP SDK npm package](https://www.npmjs.com/package/@modelcontextprotocol/sdk) — Version verification, peer dependencies
-- [TypeScript SDK Documentation](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/docs/server.md) — Server implementation guide
+### Secondary (MEDIUM confidence)
+- [Vertico GitHub](https://github.com/minad/vertico) — Vertical completion UI patterns
+- [Popper GitHub](https://github.com/karthink/popper) — Popup positioning patterns
+- [Company Mode](http://company-mode.github.io/) — C-n/C-p navigation, number key quick-select
+- [Mastering Emacs: Understanding Minibuffer Completion](https://www.masteringemacs.org/article/understanding-minibuffer-completion)
+- [Karthinks: Emacs Window Management Almanac](https://karthinks.com/software/emacs-window-management-almanac/)
 
-**Node.js & Runtime:**
-- [Node.js LTS releases](https://nodejs.org/en/about/previous-releases) — Version numbers, LTS schedules
-- [endoflife.date Node.js](https://endoflife.date/nodejs) — Support timelines verified
-- [Node.js child_process documentation](https://nodejs.org/api/child_process.html) — spawn vs exec behavior
-- [Node.js best practices](https://nodejs.org/en/docs/guides/blocking-vs-non-blocking/) — Async patterns
-
-**Security Research:**
-- [Astrix MCP Security Report 2025](https://astrix.security/learn/blog/state-of-mcp-server-security-2025/) — 88% credential exposure, 79% ENV vars
-- [Trend Micro MCP Vulnerability Disclosure](https://modelcontextprotocol.io/specification/2025-11-25) — SQL injection → prompt injection in reference server
-- [Auth0 Command Injection Prevention](https://auth0.com/blog/preventing-command-injection-attacks-in-node-js-apps/) — spawn vs exec security
-- [OWASP GenAI MCP Security Guide](https://genai.owasp.org/resource/cheatsheet-a-practical-guide-for-securely-using-third-party-mcp-servers-1-0/) — Best practices
-
-### Secondary Sources (MEDIUM confidence)
-
-**Feature Landscape:**
-- [Human-In-the-Loop MCP Server](https://github.com/GongRzhe/Human-In-the-Loop-MCP-Server) — Multiple response types implementation
-- [User Prompt MCP Server](https://github.com/nazar256/user-prompt-mcp) — Simple text input for Cursor
-- [Interactive MCP Server](https://playbooks.com/mcp/ttommyth/interactive-mcp) — Persistent chats, notifications
-- [Interactive Feedback MCP](https://github.com/noopstudios/interactive-feedback-mcp) — Command execution with feedback loop
-
-**Tooling Comparisons:**
-- [tsx vs ts-node comparison](https://betterstack.com/community/guides/scaling-nodejs/tsx-vs-ts-node/) — Benchmarks, use cases
-- [Vitest vs Jest 2025](https://medium.com/@ruverd/jest-vs-vitest-which-test-runner-should-you-use-in-2025-5c85e4f2bda9) — Performance metrics
-- [pnpm vs npm vs yarn](https://dev.to/hamzakhan/npm-vs-yarn-vs-pnpm-which-package-manager-should-you-use-in-2025-2f1g) — Disk usage, speed
-- [Pino vs Winston](https://betterstack.com/community/comparisons/pino-vs-winston/) — Logging performance
-
-**Architecture Patterns:**
-- [MCP Reference Servers](https://github.com/modelcontextprotocol/servers) — Official implementation examples
-- [MCP Best Practices Guide](https://modelcontextprotocol.info/docs/best-practices/) — Architecture recommendations
-- [Understanding MCP Through Raw STDIO](https://foojay.io/today/understanding-mcp-through-raw-stdio-communication/) — Transport layer deep dive
-
-### Tertiary Sources (LOW confidence, needs validation)
-
-**Emacs Integration:**
-- [GNU Emacs Manual: emacsclient](https://www.gnu.org/software/emacs/manual/html_node/emacs/Invoking-emacsclient.html) — Official docs
-- [emacsclient display errors](https://bbs.archlinux.org/viewtopic.php?id=281813) — Community troubleshooting
-- [Emacs daemon systemd issues](https://github.com/doomemacs/doomemacs/issues/7699) — Failure mode reports
-- [mcp.el](https://github.com/lizqwerscott/mcp.el) — Reference Emacs MCP client
-
-**Process Management:**
-- [Managing Orphaned Node.js Processes](https://medium.com/@arunangshudas/5-tips-for-cleaning-orphaned-node-js-processes-196ceaa6d85e) — Cleanup strategies
-- [Zombie Processes on Cloud Foundry](https://saturncloud.io/blog/what-is-a-zombie-process-and-how-to-avoid-it-when-spawning-nodejs-child-processes-on-cloud-foundry/) — Real-world incident
-
-**Long-Running Operations:**
-- [Build Timeout-Proof MCP Tools](https://www.arsturn.com/blog/no-more-timeouts-how-to-build-long-running-mcp-tools-that-actually-finish-the-job) — Progress notifications
-- [MCP SEP-1391: Long-Running Operations](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/1391) — Proposal discussion
+### Tertiary (LOW confidence)
+- [GitHub - grettke/ebse](https://github.com/grettke/ebse) — emacsclient return value escaping workarounds
+- [Jorgen's Weblog: Race conditions in Emacs process filters](http://blog.jorgenschaefer.de/2014/05/race-conditions-in-emacs-process-filter.html)
 
 ---
-
-**Research completed:** 2026-01-26
-**Ready for roadmap:** Yes
-
-**Next steps:**
-1. Proceed to roadmap creation with 3-phase structure outlined above
-2. Use `/gsd:research-phase` for Phase 3 (Emacs styling patterns)
-3. Plan experimentation time in Phase 2 for emacsclient edge case handling
-4. Verify agent-shell progress notification support before Phase 2 implementation
+*Research completed: 2026-02-08*
+*Ready for roadmap: yes*
