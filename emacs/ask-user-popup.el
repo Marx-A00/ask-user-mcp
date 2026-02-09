@@ -118,6 +118,28 @@ In options: confirm selection."
     (when (and ask-user-popup--selection-overlay ask-user-popup--options)
       (overlay-put ask-user-popup--selection-overlay 'face '(:inverse-video t :foreground "gray50")))))
 
+(defun ask-user-popup--self-insert ()
+  "Insert character in text field."
+  (interactive)
+  (when (and ask-user-popup--text-start
+             (>= (point) (marker-position ask-user-popup--text-start)))
+    (let ((inhibit-read-only t))
+      (insert (this-command-keys)))))
+
+(defun ask-user-popup--enter-insert ()
+  "Enter insert mode in the text field."
+  (interactive)
+  (ask-user-popup--focus-text)
+  (when (fboundp 'evil-insert-state)
+    (evil-insert-state)))
+
+(defun ask-user-popup--exit-insert ()
+  "Exit insert mode and return to options."
+  (interactive)
+  (when (fboundp 'evil-normal-state)
+    (evil-normal-state))
+  (ask-user-popup--focus-options))
+
 (defun ask-user-popup--toggle-focus ()
   "Toggle focus between options and text field."
   (interactive)
@@ -141,37 +163,40 @@ In options: confirm selection."
             (move-overlay ask-user-popup--selection-overlay line-start line-end)))))))
 
 (defun ask-user-popup--select-next ()
-  "Move selection to next option (with wrap-around), or enter text field from last option."
+  "Move selection to next option with wrap-around."
   (interactive)
   (if (eq ask-user-popup--focus 'text)
-      ;; In text field, do nothing (or could wrap to first option)
-      nil
-    ;; In options
+      ;; In text field, jump to first option
+      (ask-user-popup--focus-options)
+    ;; In options - wrap around
     (when ask-user-popup--options
-      (let ((last-index (1- (length ask-user-popup--options))))
-        (if (= ask-user-popup--selected-index last-index)
-            ;; On last option, move to text field
-            (ask-user-popup--focus-text)
-          ;; Not on last option, move to next
-          (setq ask-user-popup--selected-index 
-                (mod (1+ ask-user-popup--selected-index) 
-                     (length ask-user-popup--options)))
-          (ask-user-popup--move-selection-overlay))))))
+      (setq ask-user-popup--selected-index 
+            (mod (1+ ask-user-popup--selected-index) 
+                 (length ask-user-popup--options)))
+      (ask-user-popup--move-selection-overlay)
+      ;; Move cursor to selected option
+      (let ((pos (text-property-any (point-min) (point-max) 
+                                    'option-index ask-user-popup--selected-index)))
+        (when pos (goto-char pos))))))
 
 (defun ask-user-popup--select-prev ()
-  "Move selection to previous option (with wrap-around), or jump to last option from text field."
+  "Move selection to previous option with wrap-around."
   (interactive)
   (if (eq ask-user-popup--focus 'text)
       ;; In text field, jump to last option
       (when ask-user-popup--options
         (setq ask-user-popup--selected-index (1- (length ask-user-popup--options)))
         (ask-user-popup--focus-options))
-    ;; In options
+    ;; In options - wrap around
     (when ask-user-popup--options
       (setq ask-user-popup--selected-index 
             (mod (1- ask-user-popup--selected-index) 
                  (length ask-user-popup--options)))
-      (ask-user-popup--move-selection-overlay))))
+      (ask-user-popup--move-selection-overlay)
+      ;; Move cursor to selected option
+      (let ((pos (text-property-any (point-min) (point-max) 
+                                    'option-index ask-user-popup--selected-index)))
+        (when pos (goto-char pos))))))
 
 (defun ask-user-popup--confirm-selection ()
   "Confirm the current selection and exit."
@@ -216,7 +241,34 @@ In options: confirm selection."
     map)
   "Keymap for `ask-user-popup-mode'.")
 
-(define-derived-mode ask-user-popup-mode special-mode "AskUser"
+;; Evil mode bindings (defined at top level for proper initialization)
+(with-eval-after-load 'evil
+  (evil-set-initial-state 'ask-user-popup-mode 'normal)
+  (evil-define-key 'normal ask-user-popup-mode-map
+    (kbd "j") 'ask-user-popup--select-next
+    (kbd "k") 'ask-user-popup--select-prev
+    (kbd "G") 'end-of-buffer
+    (kbd "gg") 'beginning-of-buffer
+    (kbd "RET") 'ask-user-popup--handle-return
+    (kbd "<return>") 'ask-user-popup--handle-return
+    (kbd "q") 'ask-user-popup-cancel
+    (kbd "TAB") 'ask-user-popup--toggle-focus
+    (kbd "<tab>") 'ask-user-popup--toggle-focus
+    (kbd "i") 'ask-user-popup--enter-insert
+    (kbd "<escape>") 'ignore)
+  (evil-define-key 'insert ask-user-popup-mode-map
+    (kbd "C-c C-c") 'ask-user-popup--submit-text
+    (kbd "C-j") 'ask-user-popup--insert-newline
+    (kbd "<escape>") 'ask-user-popup--exit-insert)
+  
+  ;; Make sure basic editing works in insert state
+  (evil-define-key 'insert ask-user-popup-mode-map
+    (kbd "SPC") (lambda () (interactive) (insert " "))
+    (kbd "<backspace>") 'backward-delete-char-untabify
+    (kbd "DEL") 'backward-delete-char-untabify
+    (kbd "g") (lambda () (interactive) (insert "g"))))
+
+(define-derived-mode ask-user-popup-mode fundamental-mode "AskUser"
   "Major mode for Claude's AskUserQuestion popup buffer.
 
 \\{ask-user-popup-mode-map}"
@@ -302,16 +354,18 @@ which causes emacsclient to exit with non-zero status."
                 (setq ask-user-popup--selection-overlay (make-overlay 1 1))
                 (overlay-put ask-user-popup--selection-overlay 'face '(:inverse-video t))
                 
-                ;; Move overlay to first option
-                (goto-char (point-min))
-                (let ((first-option-pos (text-property-any (point-min) (point-max) 'option-index 0)))
-                  (when first-option-pos
-                    (goto-char first-option-pos)
-                    (let ((line-start (line-beginning-position))
-                          (line-end (1+ (line-end-position))))
-                      (move-overlay ask-user-popup--selection-overlay line-start line-end)))))
+                ;; Move overlay to first option (use save-excursion to preserve point)
+                (save-excursion
+                  (goto-char (point-min))
+                  (let ((first-option-pos (text-property-any (point-min) (point-max) 'option-index 0)))
+                    (when first-option-pos
+                      (goto-char first-option-pos)
+                      (let ((line-start (line-beginning-position))
+                            (line-end (1+ (line-end-position))))
+                        (move-overlay ask-user-popup--selection-overlay line-start line-end))))))
               
-              ;; Add text input field (always present)
+              ;; Add text input field (always present) - point should be after options
+              (goto-char (point-max))
               (let ((text-label-pos (point)))
                 ;; Visual separator if options exist
                 (when options
@@ -335,11 +389,9 @@ which causes emacsclient to exit with non-zero status."
                 (setq ask-user-popup--text-end (point-marker))
                 (set-marker-insertion-type ask-user-popup--text-end t)
                 
-                ;; Make text region editable by removing read-only property
-                ;; We'll set buffer-read-only globally, but this region stays editable
-                (put-text-property ask-user-popup--text-start 
-                                 ask-user-popup--text-end 
-                                 'read-only nil)
+                ;; Mark everything before text region as read-only
+                (put-text-property (point-min) ask-user-popup--text-start 'read-only t)
+                ;; Text region stays editable (no read-only property)
                 (put-text-property ask-user-popup--text-start 
                                  ask-user-popup--text-end 
                                  'rear-nonsticky t))
@@ -349,12 +401,6 @@ which causes emacsclient to exit with non-zero status."
                   (setq ask-user-popup--focus 'options)
                 (setq ask-user-popup--focus 'text)
                 (goto-char ask-user-popup--text-start))
-              
-              ;; Make buffer read-only (except text region which has read-only nil)
-              (setq buffer-read-only t)
-              
-              ;; Enable self-insert in text region
-              (add-hook 'post-command-hook 'ask-user-popup--maintain-text-region nil t)
               
               ;; Reset state variables
               (setq ask-user-popup--result nil)
@@ -368,6 +414,13 @@ which causes emacsclient to exit with non-zero status."
           
           ;; Select the popup window
           (select-window win)
+          
+          ;; Scroll to top and position cursor on first option
+          (goto-char (point-min))
+          (when (buffer-local-value 'ask-user-popup--options buf)
+            (let ((first-opt (text-property-any (point-min) (point-max) 'option-index 0)))
+              (when first-opt (goto-char first-opt))))
+          (set-window-start win (point-min))
           
           ;; Block until user responds or cancels
           (recursive-edit)
@@ -385,15 +438,6 @@ which causes emacsclient to exit with non-zero status."
           (quit-window t (get-buffer-window buf)))
         (when (buffer-live-p buf)
           (kill-buffer buf))))))
-
-(defun ask-user-popup--maintain-text-region ()
-  "Maintain editable text region after commands."
-  (when (and ask-user-popup--text-start ask-user-popup--text-end)
-    ;; Ensure text region properties remain
-    (let ((inhibit-read-only t))
-      (put-text-property ask-user-popup--text-start 
-                        ask-user-popup--text-end 
-                        'read-only nil))))
 
 (provide 'ask-user-popup)
 
