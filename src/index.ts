@@ -13,10 +13,21 @@ const server = new McpServer({
 server.registerTool(
   "AskUserQuestion",
   {
-    description: "Ask the user a question via Emacs minibuffer and wait for their response. Use this when you need clarification or user input.",
+    description:
+      "Ask the user a question via Emacs minibuffer and wait for their response. Use this when you need clarification or user input.",
     inputSchema: {
-      question: z.string().min(1, "Question cannot be empty").describe("The question to ask the user"),
-      header: z.string().optional().describe("Optional header/context shown before the question"),
+      question: z
+        .string()
+        .min(1, "Question cannot be empty")
+        .describe(
+          "A short, concise question or title (1-2 sentences max). Do NOT put lengthy context, analysis, or explanations here — use the header parameter for that.",
+        ),
+      header: z
+        .string()
+        .optional()
+        .describe(
+          "Optional context, analysis, or explanation shown before the question. Put any detailed reasoning, options analysis, or background information here — NOT in the question field. This is rendered as normal body text below the question title.",
+        ),
       timeout_ms: z
         .number()
         .min(30000, "Timeout must be at least 30 seconds")
@@ -45,7 +56,8 @@ server.registerTool(
         ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       logger.warn({ error: errorMessage }, "Tool call failed");
       return {
         isError: true,
@@ -57,7 +69,7 @@ server.registerTool(
         ],
       };
     }
-  }
+  },
 );
 
 function gracefulShutdown(signal: string): void {

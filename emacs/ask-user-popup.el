@@ -285,6 +285,45 @@ BEG and END are the change boundaries."
                  (> end (marker-position ask-user-popup--text-end))))
     (signal 'text-read-only '("Cannot edit outside the text field"))))
 
+;;; Markdown rendering
+
+(defun ask-user-popup--render-markdown (start end)
+  "Apply basic markdown styling to text between START and END.
+Handles **bold**, *italic*, and `code` spans."
+  (save-excursion
+    ;; Bold: **text**
+    (goto-char start)
+    (while (re-search-forward "\\*\\*\\(.+?\\)\\*\\*" end t)
+      (let ((content (match-string 1))
+            (m-start (match-beginning 0)))
+        (replace-match content t t)
+        ;; Adjust end marker for removed syntax chars
+        (setq end (- end 4))
+        (put-text-property m-start (+ m-start (length content))
+                           'face '(:weight bold))))
+    ;; Italic: *text* (but not inside words like file*name)
+    (goto-char start)
+    (while (re-search-forward "\\(?:^\\|[[:space:](]\\)\\(\\*\\(.+?\\)\\*\\)\\(?:[[:space:].,;:!?)]\\|$\\)" end t)
+      (let ((content (match-string 2))
+            (m-start (match-beginning 1))
+            (m-end (match-end 1)))
+        (save-excursion
+          (goto-char m-start)
+          (delete-region m-start m-end)
+          (insert content)
+          (setq end (- end 2))
+          (put-text-property m-start (+ m-start (length content))
+                             'face '(:slant italic)))))
+    ;; Inline code: `text`
+    (goto-char start)
+    (while (re-search-forward "`\\([^`\n]+?\\)`" end t)
+      (let ((content (match-string 1))
+            (m-start (match-beginning 0)))
+        (replace-match content t t)
+        (setq end (- end 2))
+        (put-text-property m-start (+ m-start (length content))
+                           'face '(:family "monospace" :background "#2a2a2a"))))))
+
 ;;; Main popup function
 
 (defun mr-x/ask-user-popup (question &optional description options)
@@ -325,9 +364,11 @@ which causes emacsclient to exit with non-zero status."
               (insert (propertize question 'face '(:weight bold :height 1.2)))
               (insert "\n")
 
-              ;; Description (muted)
+              ;; Description (with markdown rendering)
               (when description
-                (insert (propertize description 'face 'shadow))
+                (let ((desc-start (point)))
+                  (insert description)
+                  (ask-user-popup--render-markdown desc-start (point)))
                 (insert "\n\n"))
 
               ;; Separator
