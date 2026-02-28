@@ -360,21 +360,21 @@ which causes emacsclient to exit with non-zero status."
               (setq-local header-line-format
                           (propertize " Claude is asking..." 'face '(:weight bold)))
 
-              ;; Question (bold, larger)
-              (insert (propertize question 'face '(:weight bold :height 1.2)))
+              ;; Question (bold, normal size)
+              (insert (propertize question 'face '(:weight bold)))
               (insert "\n")
 
-              ;; Description (with markdown rendering)
+              ;; Description (with markdown rendering, slightly compact)
               (when description
                 (let ((desc-start (point)))
-                  (insert description)
+                  (insert (propertize description 'face '(:height 0.9)))
                   (ask-user-popup--render-markdown desc-start (point)))
-                (insert "\n\n"))
+                (insert "\n"))
 
               ;; Separator
               (insert (propertize "────────────────────────────────────────"
                                   'face 'shadow))
-              (insert "\n\n")
+              (insert "\n")
 
               ;; Options
               (when options
@@ -441,7 +441,7 @@ which causes emacsclient to exit with non-zero status."
           ;; Display at bottom
           (setq win (display-buffer buf
                                     '((display-buffer-at-bottom)
-                                      (window-height . 0.4)
+                                      (window-height . 0.6)
                                       (preserve-size . (nil . t)))))
           (select-window win)
 
